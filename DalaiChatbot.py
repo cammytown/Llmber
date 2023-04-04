@@ -1,5 +1,5 @@
 class DalaiChatbot(Chatbot):
-    def __init__(self, name = "Alpaca"):
+    def __init__(self, name = "Dalai"):
         self.name = name
 
     def send_message(self, user_message):

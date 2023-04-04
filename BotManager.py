@@ -160,9 +160,6 @@ class BotManager:
 
         return response
 
-
-
-
     def say(self, message):
         # Write response message to file mostly for festival tts:
         response_filepath = "chatbots/current-response.txt"
