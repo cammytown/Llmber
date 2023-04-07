@@ -1,4 +1,3 @@
-from collections import Counter
 import secretstorage
 
 class Chatbot:
@@ -20,31 +19,15 @@ class Chatbot:
             return False
 
     def send_message(self, user_message):
-        response = openai.ChatCompletion.create(
-          model="gpt-3.5-turbo",
-          messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": user_message},
-            ]
-        )
+        raise NotImplementedError
 
-        response_message = response['choices'][0]['message']['content']
+        # Send dialogue history to chatbot:
+        # response_message = self.api.send_request(user_message)
+        # return response_message
 
-        with open("chatbots/ChatGPT/request-usage.txt", "r+") as file:
-            # Read file:
-            previous_usage = Counter(json.load(file))
+    def request_tokens(self):
+        raise NotImplementedError
 
-            # Combine previous usage with query usage:
-            request_usage = Counter(response['usage'])
-            total_usage = dict(previous_usage + request_usage)
-
-            # Reset file read cursor to start:
-            file.seek(0)
-
-            # Write new total to file:
-            json.dump(total_usage, file)
-
-            # Remove file content after the cursor we just wrote up to:
-            file.truncate();
-
-        return responseMessage
+        # Request tokens from chatbot:
+        # response_message = self.api.request_tokens()
+        # return response_message

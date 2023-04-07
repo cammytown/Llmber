@@ -23,7 +23,7 @@ class BardChatbot(Chatbot):
 
         response_message = response['content']
 
-        # with open("chatbots/GoogleBard/interaction-log.txt", "a") as file:
+        # with open("chatbot-data/GoogleBard/interaction-log.txt", "a") as file:
         #     file.write(json.dumps(interaction) + "\n")
 
         return response_message

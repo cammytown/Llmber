@@ -1,4 +1,8 @@
+from collections import Counter
 import openai
+import json
+
+from .Chatbot import Chatbot
 
 class OpenAIChatbot(Chatbot):
     api = openai
@@ -22,8 +26,75 @@ class OpenAIChatbot(Chatbot):
         # self.openai_bot.set_stop(['\n', ' Human:', ' AI:'])
 
     def send_message(self, user_message):
-        # Send dialogue history to chatbot:
-        response = self.api.send_request(user_message)
+        response_obj = openai.Completion.create(
+            model = "text-davinci-003",
+            prompt = user_message,
 
-        # Return response:
-        return response
+            # Maximum number of tokens to generate
+            max_tokens = 1024,
+
+            # Variety of possible tokens
+            # (OpenAI says temperature or top_p, not both)
+            temperature = 0.7,
+            # top_p = 1,
+
+            # Penalize new tokens based on whether they appear in the text so far
+            # frequency_penalty = 
+            # presence_penalty = 
+
+            # Number of completions (i.e. number of choices) to return
+            # (This will naturally increase token usage)
+            # n = 1,
+
+            # Stop sequence(s)
+            # stop = ['\n']
+        )
+
+        print("OpenAI response:")
+        print(response_obj)
+
+        # Parse response
+        response_message = response_obj['choices'][0]['text']
+
+        # Log usage
+        self.log_usage(response_obj)
+
+        return response_message
+
+    def send_chat_message(self, user_message, system_message = None):
+        if not system_message:
+            system_message = "You are a helpful assistant."
+
+        response_obj = openai.ChatCompletion.create(
+          model="gpt-3.5-turbo",
+          messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": user_message},
+            ]
+        )
+
+        response_message = response_obj['choices'][0]['message']['content']
+
+        # Log usage
+        self.log_usage(response_obj)
+
+        # Return response
+        return response_message
+
+    def log_usage(self, response_obj):
+        with open("chatbot-data/ChatGPT/request-usage.txt", "r+") as file:
+            # Read file
+            previous_usage = Counter(json.load(file))
+
+            # Combine previous usage with query usage
+            request_usage = Counter(response_obj['usage'])
+            total_usage = dict(previous_usage + request_usage)
+
+            # Reset file read cursor to start
+            file.seek(0)
+
+            # Write new total to file
+            json.dump(total_usage, file)
+
+            # Remove file content after the cursor we just wrote up to
+            file.truncate();

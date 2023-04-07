@@ -15,49 +15,50 @@ class LlamaCPPChatbot(Chatbot):
     def __init__(self, name = "LlamaCPP"):
         super().__init__(name)
 
-        # Create the inference parameters:
+        # Create the inference parameters
         params = llamacpp.InferenceParams.default_with_callback(progress_callback)
 
-        # Set the model path:
+        # Set the model path
         params.path_model = '/mnt/Files/src/llama.cpp/models/gpt4all-7B/gpt4all-lora-converted.bin'
 
-        # Set the number of threads:
-        params.n_threads = 6
+        # Set the number of threads
+        params.n_threads = 8
 
-        # Reuse the last n tokens:
+        # Reuse the last n tokens
         params.repeat_last_n = 64
 
-        # Set the number of predictions:
-        params.n_predict = 128
+        # Set the number of predictions
+        params.n_predict = 256
 
-        # Set context size:
+        # Set context size
         params.n_ctx = 1024
 
-        # Set batch size:
+        # Set batch size
         params.n_batch = 8
 
-        # Set the top-k sampling:
+        # Set the top-k sampling
         params.top_k = 40
 
-        # Set the top-p sampling:
+        # Set the top-p sampling
         params.top_p = 0.9
 
-        # Set the temperature:
+        # Set the temperature
         params.temp = 0.8
 
-        # Set the repetition penalty:
+        # Set the repetition penalty
         params.repeat_penalty = 1.3
 
-        # Set the seed:
+        # Set the seed
         params.seed = -1
 
-        # Initialize the model:
+        # Initialize the model
         self.model = llamacpp.LlamaInference(params)
 
-    def request_tokens(self, n_tokens = 128):
+    #@REVISIT n_tokens and n_predict seem at odds; will be confusing
+    def request_tokens(self, n_tokens = 256):
         token_string = ""
 
-        # Sample (generate) tokens:
+        # Sample (generate) tokens
         print("Sampling...")
         is_finished = False
         n_output = 0
@@ -68,16 +69,16 @@ class LlamaCPPChatbot(Chatbot):
             if self.model.has_unconsumed_input():
                 self.model.ingest_all_pending_input()
             else:
-                # Sample a token:
+                # Sample a token
                 token = self.model.sample()
 
-                # Convert the token to text:
+                # Convert the token to text
                 text = self.model.token_to_str(token)
 
-                # Add the token to the string:
+                # Add the token to the string
                 token_string += text
 
-                # Print the token:
+                # Print the token
                 print(text, end="", flush=True)
 
                 n_output += 1
@@ -85,29 +86,29 @@ class LlamaCPPChatbot(Chatbot):
                 # End of text token was found
                 is_finished = token == self.model.token_eos()
 
-            # If reverse prompt is encountered:
-            # if self.model.is_antiprompt_present():
+            # If reverse prompt is encountered
+            # if self.model.is_antiprompt_present()
             #     is_finished = True
         
             if is_finished:
                 break
 
-            # if self.model.is_finished():
+            # if self.model.is_finished()
             #     self.model.reset_remaining_tokens()
             #     is_interacting = True
 
         print("\n")
 
-        # Flush stdout:
+        # Flush stdout
         sys.stdout.flush()
 
         return token_string
 
     def send_message(self, message):
-        # Tokenize the message:
+        # Tokenize the message
         prompt_tokens = self.model.tokenize(message, True)
 
-        # Supply the tokenized prompt:
+        # Supply the tokenized prompt
         self.model.update_input(prompt_tokens)
 
         print("Ingesting pending input...")
