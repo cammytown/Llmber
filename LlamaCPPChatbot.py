@@ -1,6 +1,7 @@
 import sys
 import subprocess
 import llamacpp
+# from llama_cpp import Llama
 
 from .Chatbot import Chatbot
 
@@ -19,7 +20,8 @@ class LlamaCPPChatbot(Chatbot):
         params = llamacpp.InferenceParams.default_with_callback(progress_callback)
 
         # Set the model path
-        params.path_model = '/mnt/Files/src/llama.cpp/models/gpt4all-7B/gpt4all-lora-converted.bin'
+        # params.path_model = '/mnt/Files/src/llama.cpp/models/gpt4all-7B/gpt4all-lora-converted.bin'
+        params.path_model = '/mnt/Files/src/llama.cpp/models/gpt4all-7B/gpt4all-lora-unfiltered-converted.bin'
 
         # Set the number of threads
         params.n_threads = 8
@@ -53,6 +55,9 @@ class LlamaCPPChatbot(Chatbot):
 
         # Initialize the model
         self.model = llamacpp.LlamaInference(params)
+
+        if not self.model.is_initialized():
+            raise Exception("Model failed to initialize")
 
     #@REVISIT n_tokens and n_predict seem at odds; will be confusing
     def request_tokens(self, n_tokens = 256):
@@ -111,9 +116,10 @@ class LlamaCPPChatbot(Chatbot):
         # Supply the tokenized prompt
         self.model.update_input(prompt_tokens)
 
-        print("Ingesting pending input...")
+        # Ingest the prompt
         self.model.ingest_all_pending_input()
 
+        # Generate tokens
         response_message = self.request_tokens()
 
         return response_message

@@ -1,4 +1,5 @@
 import Bard
+from . import Chatbot
 
 class BardChatbot(Chatbot):
     api: Bard.Chatbot

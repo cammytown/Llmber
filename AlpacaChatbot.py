@@ -1,4 +1,4 @@
-class DalaiChatbot(Chatbot):
+class AlpacaChatbot(Chatbot):
     def __init__(self, name = "Alpaca"):
         self.name = name
 
