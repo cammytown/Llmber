@@ -56,7 +56,7 @@ class LlamaCPPChatbot(Chatbot):
         # Initialize the model
         self.model = llamacpp.LlamaInference(params)
 
-        if not self.model.is_initialized():
+        if not self.model: #@REVISIT does this do anything?
             raise Exception("Model failed to initialize")
 
     #@REVISIT n_tokens and n_predict seem at odds; will be confusing
