@@ -129,7 +129,7 @@ class RWKVChatbot(Chatbot):
 
             self.add_tokens_to_state([token])
 
-            # output
+            # Decode token
             token_meaning = self.pipeline.decode([token])
             token_string += token_meaning
             print(token_meaning, end='', flush=True)
