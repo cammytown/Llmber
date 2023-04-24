@@ -16,7 +16,7 @@ class BardChatbot(Chatbot):
             print("ERROR: Couldn't retrieve GoogleBard key")
 
     def send_message(self, message):
-        response = self.api.ask(user_message)
+        response = self.api.ask(message)
 
         # Extract bot's message to user:
         #@REVISIT also consider incorporating response['choices']

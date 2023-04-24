@@ -2,7 +2,7 @@ class DalaiChatbot(Chatbot):
     def __init__(self, name = "Dalai"):
         self.name = name
 
-    def send_message(self, user_message):
+    def send_message(self, message):
         model = "/mnt/Files/.cache/dalai/alpaca/models/7B/ggml-model-q4_0.bin"
         #model = "/mnt/Files/.cache/dalai/alpaca/models/13B/ggml-model-q4_0.bin"
 
@@ -16,7 +16,7 @@ class DalaiChatbot(Chatbot):
                                    "--temp", "0.8",
                                    "--repeat_last_n", "64",
                                    "--repeat_penalty", "1.3",
-                                   "-p", user_message
+                                   "-p", message
                                    ], stdout=subprocess.PIPE, text=True)
         #], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
@@ -35,7 +35,7 @@ class DalaiChatbot(Chatbot):
             # If this is the first line:
             if(response == None):
                 # Remove the user's query from the returned text:
-                response = output.replace(user_message, "")
+                response = output.replace(message, "")
             else:
                 response += output
 

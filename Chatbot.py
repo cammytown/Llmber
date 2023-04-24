@@ -1,9 +1,16 @@
 import secretstorage
 
 class Chatbot:
+    """
+    A chatbot that can be used to send messages to and receive messages from
+    a chatbot API.
+    """
+
     # Setup secretstorage:
     _bus = secretstorage.dbus_init()
     _collection = secretstorage.get_default_collection(_bus)
+
+    # context: str = ""
 
     def __init__(self, name):
         self.name = name
@@ -18,16 +25,16 @@ class Chatbot:
         else:
             return False
 
-    def send_message(self, user_message):
+    def send_message(self,
+                     message,
+                     stop_sequences = [],
+                     #@REVISIT regex on every token is probably a bad idea, usually
+                     stop_regex = None):
         raise NotImplementedError
-
-        # Send dialogue history to chatbot:
-        # response_message = self.api.send_request(user_message)
+        # response_message = self.api.send_request(message)
         # return response_message
 
     def request_tokens(self):
         raise NotImplementedError
-
-        # Request tokens from chatbot:
         # response_message = self.api.request_tokens()
         # return response_message

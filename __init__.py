@@ -3,4 +3,5 @@ from .OpenAIChatbot import OpenAIChatbot
 from .BardChatbot import BardChatbot
 from .LlamaCPPChatbot import LlamaCPPChatbot
 from .RWKVChatbot import RWKVChatbot
+from .GPT2Chatbot import GPT2Chatbot
 # from .GPT4AllChatbot import GPT4AllChatbot

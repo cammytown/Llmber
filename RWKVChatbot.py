@@ -1,20 +1,11 @@
 import os
 import sys
+import re
 
 # set these before import RWKV
 os.environ['RWKV_JIT_ON'] = '1'
 os.environ["RWKV_CUDA_ON"] = '1' # '1' to compile CUDA kernel (10x faster), requires c++ compiler & cuda libraries
 
-########################################################################################################
-#
-# Use '/' in model path, instead of '\'. Use ctx4096 models if you need long ctx.
-#
-# fp16 = good for GPU (!!! DOES NOT support CPU !!!)
-# fp32 = good for CPU
-# bf16 = worse accuracy, supports CPU
-# xxxi8 (example: fp16i8, fp32i8) = xxx with int8 quantization to save 50% VRAM/RAM, slower, slightly less accuracy
-#
-# We consider [ln_out+head] to be an extra layer, so L12-D768 (169M) has "13" layers, L24-D2048 (1.5B) has "25" layers, etc.
 # Strategy Examples: (device = cpu/cuda/cuda:0/cuda:1/...)
 # 'cpu fp32' = all layers cpu fp32
 # 'cuda fp16' = all layers cuda fp16
@@ -36,12 +27,12 @@ os.environ["RWKV_CUDA_ON"] = '1' # '1' to compile CUDA kernel (10x faster), requ
 #   0% VRAM = 'cpu fp32'                    # all layers cpu fp32
 #r
 # Use '+' for STREAM mode, which can save VRAM too, and it is sometimes faster
-# 'cuda fp16i8 *10+' = first 10 layers cuda fp16i8, then fp16i8 stream the rest to it (increase 10 for better speed)
+# 'cuda fp16i8 *10+' = first 10 layers cuda fp16i8, then fp16i8 stream the rest
+# to it (increase 10 for better speed)
 #
 # Extreme STREAM: 3G VRAM is enough to run RWKV 14B (slow. will be faster in future)
 # 'cuda fp16i8 *0+ -> cpu fp32 *1' = stream all layers cuda fp16i8, last 1 layer [ln_out+head] cpu fp32
 #
-# ########################################################################################################
 
 from rwkv.model import RWKV
 from rwkv.utils import PIPELINE, PIPELINE_ARGS
@@ -57,52 +48,94 @@ class RWKVChatbot(Chatbot):
     logits: list
     state = None
 
-    all_tokens: list = [] #@REVISIT naming
+    # all_tokens: list = [] #@REVISIT naming
 
-    def __init__(self, name = "RWKVChatbot"):
+    def __init__(self, name = "RWKV"):
         super().__init__(name)
 
-        # Initialize the model
-        # model = RWKV(model='/run/media/cammy/PROJECTS2/models/rwkv-4-raven/RWKV-4-Raven-14B-v9-Eng99%-Other1%-20230412-ctx8192.pth', strategy='cpu fp32')
-        self.model = RWKV(model='/run/media/cammy/PROJECTS2/models/rwkv-4-raven/RWKV-4-Raven-1B5-v9-Eng99%-Other1%-20230411-ctx4096.pth', strategy='cuda fp16')
-        self.pipeline = PIPELINE(self.model, "/home/cammy/Fsrc/ChatRWKV/20B_tokenizer.json") # 20B_tokenizer.json is in https://github.com/BlinkDL/ChatRWKV
+        model_path = '/run/media/cammy/PROJECTS2/models/rwkv-4-raven/RWKV-4-Raven-1B5-v9-Eng99%-Other1%-20230411-ctx4096.pth'
+        # model_path = '/run/media/cammy/PROJECTS2/models/rwkv-4-raven/RWKV-4-Raven-7B-v9-Eng99%-Other1%-20230412-ctx8192.pth'
+        # model_path = '/run/media/cammy/PROJECTS2/models/rwkv-4-pile/RWKV-4-Pile-7B-20230406-ctx8192-test949.pth'
 
-        self.args = PIPELINE_ARGS(temperature = 1.0, top_p = 0.7, top_k = 100, # top_k = 0 then ignore
-                             alpha_frequency = 0.25,
-                             alpha_presence = 0.25,
-                             token_ban = [0], # ban the generation of some tokens
-                             token_stop = [], # stop generation whenever you see any token here
-                             chunk_len = 256) # split input into chunks to save VRAM (shorter -> slower)
+        #'/run/media/cammy/PROJECTS2/models/rwkv-4-raven/RWKV-4-Raven-14B-v9-Eng99%-Other1%-20230412-ctx8192.pth'
+
+        tokenizer_path = "/home/cammy/Fsrc/ChatRWKV/20B_tokenizer.json"
+
+        # Initialize the model
+        self.model = RWKV(model=model_path, strategy='cuda fp16')
+        # self.model = RWKV(model=model_path, strategy='cuda fp16i8 -> cpu fp32 *3')
+        self.pipeline = PIPELINE(self.model, tokenizer_path)
+
+        self.args = PIPELINE_ARGS(
+                # variability of the generated tokens
+                temperature = 1.5,
+
+                # select tokens with prob that can add to
+                # another token prob to equal >= top_p
+                top_p = 0.2,
+
+                # select from top_k most likely tokens
+                top_k = 100,
+
+                # frequency penalty
+                alpha_frequency = 0.25,
+
+                # presence penalty
+                alpha_presence = 0.25,
+
+                # ban the generation of some tokens
+                token_ban = [0],
+
+                # stop generation on these tokens
+                token_stop = [],
+
+                # split input into chunks to save VRAM
+                # (shorter -> slower)
+                chunk_len = 256)
 
         if not self.model: #@REVISIT does this do anything?
             raise Exception("Model failed to initialize")
 
     def add_tokens_to_state(self, tokens):
-        # Add tokens to all_tokens
-        self.all_tokens += tokens
+        # Decode tokens and add to context
+        #@REVISIT optimization possibilities
+        if __debug__:
+            token_meaning = self.pipeline.decode(tokens)
+            # self.context += token_meaning
+            print(token_meaning, end='', flush=True) #@SCAFFOLDING
 
         # Add tokens to state
         while len(tokens) > 0:
             self.logits, self.state = self.pipeline.model.forward(tokens[:self.args.chunk_len], self.state)
             tokens = tokens[self.args.chunk_len:]
 
-    def send_message(self, message):
+    def add_string_to_state(self, string):
+        tokens = self.pipeline.encode(string)
+        self.add_tokens_to_state(tokens)
+
+    def send_message(self, message, stop_sequences = [], stop_regex = None):
         # Encode message
         tokens = self.pipeline.encode(message)
 
         # Add tokens to state
+        if __debug__:
+            print("Updating model state with tokens: {}".format(tokens))
         self.add_tokens_to_state(tokens)
 
-        self.logits, self.state = self.pipeline.model.forward(tokens, self.state)
-
         # Generate response
-        response_message = self.request_tokens()
+        response_message = self.request_tokens(n_tokens=256,
+                                               stop_sequences=stop_sequences,
+                                               stop_regex=stop_regex)
 
         return response_message
 
     #@REVISIT n_tokens and n_predict seem at odds; will be confusing
     #@REVISIT currently returns string, not list of tokens; confusing?
-    def request_tokens(self, n_tokens = 256):
+    def request_tokens(self,
+                       n_tokens = 256,
+                       stop_sequences = [],
+                       stop_regex = None):
+
         token_string = ""
 
         for i in range(n_tokens):
@@ -113,9 +146,9 @@ class RWKVChatbot(Chatbot):
 
             # sampler
             token = self.pipeline.sample_logits(self.logits,
-                                  temperature=self.args.temperature,
-                                  top_p=self.args.top_p,
-                                  top_k=self.args.top_k)
+                                       temperature=self.args.temperature,
+                                       top_p=self.args.top_p,
+                                       top_k=self.args.top_k)
 
             # If token is in token_stop, stop generation
             if token in self.args.token_stop:
@@ -129,10 +162,12 @@ class RWKVChatbot(Chatbot):
 
             self.add_tokens_to_state([token])
 
-            # Decode token
-            token_meaning = self.pipeline.decode([token])
-            token_string += token_meaning
-            print(token_meaning, end='', flush=True)
+            # Decode token and add to token_string
+            token_string += self.pipeline.decode([token])
+
+            # Check for occurrence of a stop sequence:
+            if self.check_for_stop(token_string, stop_sequences, stop_regex):
+                break
 
             # tmp = self.pipeline.decode(self.all_tokens[out_last:])
             # if '\ufffd' not in tmp: # is valid utf-8 string?
@@ -143,7 +178,27 @@ class RWKVChatbot(Chatbot):
             #     out_last = len(self.all_tokens)
             #     # out_last = i + 1
 
-        # Flush stdout
-        sys.stdout.flush()
+        if __debug__:
+            # Flush stdout
+            sys.stdout.flush()
+            # print(f"Generated {len(token_string)} tokens")
 
         return token_string
+
+    def check_for_stop(self, token_string, stop_sequences, stop_regex):
+        # Check for occurrence of a stop sequence:
+        for stop_sequence in stop_sequences:
+            #@REVISIT I check the whole string because I worry that the
+            #stop sequence might occur in the middle of a token
+            if stop_sequence in token_string:
+                if __debug__:
+                    print(f"Found stop sequence {stop_sequence} in {token_string}")
+                return True
+
+        # Check for occurrence of a stop regex:
+        #@REVISIT doing this for every token is questionable
+        if stop_regex:
+            if re.search(stop_regex, token_string):
+                if __debug__:
+                    print(f"Found stop regex {stop_regex} in {token_string}")
+                return True

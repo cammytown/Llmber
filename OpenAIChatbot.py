@@ -7,7 +7,7 @@ from .Chatbot import Chatbot
 class OpenAIChatbot(Chatbot):
     api = openai
 
-    def __init__(self, name = "ChatGPT"):
+    def __init__(self, name = "OpenAI"):
         super().__init__(name)
 
         openai_key = self.retrieve_key('openai')
@@ -25,10 +25,10 @@ class OpenAIChatbot(Chatbot):
         # self.openai_bot.set_presence_penalty(0)
         # self.openai_bot.set_stop(['\n', ' Human:', ' AI:'])
 
-    def send_message(self, user_message):
+    def send_message(self, message):
         response_obj = openai.Completion.create(
             model = "text-davinci-003",
-            prompt = user_message,
+            prompt = message,
 
             # Maximum number of tokens to generate
             max_tokens = 1024,
