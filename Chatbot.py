@@ -10,6 +10,8 @@ class Chatbot:
     _bus = secretstorage.dbus_init()
     _collection = secretstorage.get_default_collection(_bus)
 
+    name: str
+    keeps_context: bool = False
     # context: str = ""
 
     def __init__(self, name):

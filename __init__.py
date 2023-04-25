@@ -1,7 +1,11 @@
 from .Chatbot import Chatbot
-from .OpenAIChatbot import OpenAIChatbot
-from .BardChatbot import BardChatbot
+
+from .AutoChatbot import AutoChatbot
+
+from .HFTransformersAutoBot import HFTransformersAutoBot
 from .LlamaCPPChatbot import LlamaCPPChatbot
 from .RWKVChatbot import RWKVChatbot
-from .GPT2Chatbot import GPT2Chatbot
+
+from .OpenAIChatbot import OpenAIChatbot
+from .BardChatbot import BardChatbot
 # from .GPT4AllChatbot import GPT4AllChatbot

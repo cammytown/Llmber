@@ -53,6 +53,8 @@ class RWKVChatbot(Chatbot):
     def __init__(self, name = "RWKV"):
         super().__init__(name)
 
+        self.keeps_context = True
+
         model_path = '/run/media/cammy/PROJECTS2/models/rwkv-4-raven/RWKV-4-Raven-1B5-v9-Eng99%-Other1%-20230411-ctx4096.pth'
         # model_path = '/run/media/cammy/PROJECTS2/models/rwkv-4-raven/RWKV-4-Raven-7B-v9-Eng99%-Other1%-20230412-ctx8192.pth'
         # model_path = '/run/media/cammy/PROJECTS2/models/rwkv-4-pile/RWKV-4-Pile-7B-20230406-ctx8192-test949.pth'

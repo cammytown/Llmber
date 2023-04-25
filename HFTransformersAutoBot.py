@@ -6,17 +6,18 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from .Chatbot import Chatbot
 
-class HuggingFaceAutoChatbot(Chatbot):
+class HFTransformersAutoBot(Chatbot):
     logits: Optional[torch.Tensor] = None
     past_key_values: Optional[torch.Tensor] = None
 
-    def __init__(self, name = "GPT2"):
+    def __init__(self, name):
         super().__init__(name)
 
         self.keeps_context = True
 
-        # model_name = "PygmalionAI/pygmalion-350m"
-        # model_name = "gpt2-large"
+        if not name:
+            raise ValueError("Invalid chatbot name: {name}")
+
         model_name = name.lower()
         cache_dir = "/run/media/cammy/PROJECTS2/huggingface_cache" #@SCAFFOLDING
 

@@ -7,6 +7,8 @@ class BardChatbot(Chatbot):
     def __init__(self, name = "Bard"):
         super().__init__(name)
 
+        self.keeps_context = True
+
         # Retrieve Google Bard key:
         googlebard_key = self.retrieve_key('googlebard')
         if googlebard_key:

@@ -16,6 +16,8 @@ class LlamaCPPChatbot(Chatbot):
     def __init__(self, name = "LlamaCPP"):
         super().__init__(name)
 
+        self.keeps_context = True
+
         # Create the inference parameters
         params = llamacpp.InferenceParams.default_with_callback(progress_callback)
 
