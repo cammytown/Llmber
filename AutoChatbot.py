@@ -32,6 +32,8 @@ class AutoChatbot(Chatbot):
                 case _:
                     raise ValueError(f"Invalid remote chatbot name: {name}")
 
+        self.keeps_context = self.chatbot.keeps_context
+
     def send_message(self, message, stop_sequences = [], stop_regex = None):
         return self.chatbot.send_message(message, stop_sequences, stop_regex)
 

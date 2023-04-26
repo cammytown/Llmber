@@ -1,5 +1,6 @@
 import sys
 import torch
+import re
 from typing import Optional
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -24,23 +25,12 @@ class HFTransformersAutoBot(Chatbot):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=cache_dir)
         self.model = AutoModelForCausalLM.from_pretrained(model_name, cache_dir=cache_dir)
 
+        # Set the model to half-precision floating point and move it to the GPU
+        #@REVISIT make configurable?
         self.model.half().cuda()
 
         # Set the model to evaluation mode (disables dropout)
         self.model.eval()
-
-    def add_tokens_to_context(self, tokens):
-        """
-        Add tokens to the model's current context.
-        """
-
-        with torch.no_grad():
-            # Generate new logits
-            outputs = self.model(tokens, past_key_values=self.past_key_values)
-
-            # Update the logits and past key values
-            self.logits = outputs.logits
-            self.past_key_values = outputs.past_key_values
 
     def send_message(self, message, stop_sequences = [], stop_regex = None):
         # Tokenize message
@@ -69,14 +59,26 @@ class HFTransformersAutoBot(Chatbot):
 
         return response_text
 
+    def add_tokens_to_context(self, tokens):
+        """
+        Add tokens to the model's current context.
+        """
+
+        with torch.no_grad():
+            # Generate new logits
+            outputs = self.model(tokens, past_key_values=self.past_key_values)
+
+            # Update the logits and past key values
+            self.logits = outputs.logits
+            self.past_key_values = outputs.past_key_values
+
     def request_tokens(self, n_tokens = 128, stop_sequences = []):
         # Generate one token at a time
         response = []
+        response_text = "" #@REVISIT optimization? only use if regex is needed?
 
-        # Convert stop sequences to token IDs
-        stop_token_sequences = []
-        for stop_sequence in stop_sequences:
-            stop_token_sequences.append(self.tokenizer.encode(stop_sequence))
+        # Parse stop_sequences into a dictionary of filter types
+        stop_filters = self.parse_stop_sequences(stop_sequences)
 
         with torch.no_grad():
             for i in range(n_tokens):
@@ -87,30 +89,29 @@ class HFTransformersAutoBot(Chatbot):
                 # Turn next_token into something that can be fed into the model
                 next_token = torch.tensor([[next_token_id]]).to(self.model.device)
 
+                # Check if the token is an end-of-sequence token
+                if next_token_id == self.tokenizer.eos_token_id:
+                    break
+
                 # Add next token to context
                 self.add_tokens_to_context(next_token)
 
                 # Add token to response
                 response.append(next_token_id)
 
-                # Check if the token is an end-of-sequence token
-                if next_token_id == self.tokenizer.eos_token_id:
-                    break
+                # Decode the token
+                token_meaning = self.tokenizer.decode(next_token_id,
+                                                      skip_special_tokens=True)
+
+                # Add token meaning to response text
+                response_text += token_meaning
 
                 # Check for occurrences of stop sequences
-                stop_sequence_found = False
-                for stop_token_sequence in stop_token_sequences:
-                    if len(response) >= len(stop_token_sequence):
-                        if response[-len(stop_token_sequence):] == stop_token_sequence:
-                            stop_sequence_found = True
-                            break
-                if stop_sequence_found:
+                if self.check_stop_filters(stop_filters, response):
                     break
 
                 # Print the token
                 if __debug__:
-                    token_meaning = self.tokenizer.decode(next_token_id,
-                                                          skip_special_tokens=True)
                     print(token_meaning, flush=True, end="")
 
         if __debug__:
@@ -118,6 +119,44 @@ class HFTransformersAutoBot(Chatbot):
             sys.stdout.flush()
 
         return response
+
+    def parse_stop_sequences(self, stop_sequences):
+        """
+        Parse a list of stop sequences into a dictionary of filter types.
+        """
+
+        stop_filters = {
+            "token_sequences": [],
+            "regexes": []
+        }
+
+        for stop_sequence in stop_sequences:
+            # If stop sequence is a string
+            if isinstance(stop_sequence, str):
+                stop_tokens = self.tokenizer.encode(stop_sequence)
+                stop_filters["token_sequences"].append(stop_tokens)
+
+            # If stop sequence is a dict
+            elif isinstance(stop_sequence, dict):
+                match stop_sequence["type"]:
+                    case "regex":
+                        stop_filters["regexes"].append(stop_sequence["value"])
+
+        return stop_filters
+
+    def check_stop_filters(self, stop_filters, response):
+        # Check for stop sequences that are token sequences
+        for stop_token_sequence in stop_filters["token_sequences"]:
+            if len(response) >= len(stop_token_sequence):
+                if response[-len(stop_token_sequence):] == stop_token_sequence:
+                    return True
+
+        # Check for stop sequences that are regexes
+        for stop_regex in stop_filters["regexes"]:
+            if re.search(stop_regex, response_text):
+                return True
+
+        return False
 
     def sample(self, temperature = 1.0, top_k = 0, top_p = 0.0):
         """
@@ -127,7 +166,7 @@ class HFTransformersAutoBot(Chatbot):
         # Apply temperature
         logits = self.logits / temperature
 
-        #@TODO implement reptition/etc. penalty
+        #@TODO implement repetition/etc. penalty
 
         # Apply top-k
         if top_k > 0:
