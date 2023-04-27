@@ -74,7 +74,7 @@ class HFTransformersAutoBot(Chatbot):
 
     def request_tokens(self, n_tokens = 128, stop_sequences = []):
         # Generate one token at a time
-        response = []
+        response_tokens = []
         response_text = "" #@REVISIT optimization? only use if regex is needed?
 
         # Parse stop_sequences into a dictionary of filter types
@@ -97,7 +97,7 @@ class HFTransformersAutoBot(Chatbot):
                 self.add_tokens_to_context(next_token)
 
                 # Add token to response
-                response.append(next_token_id)
+                response_tokens.append(next_token_id)
 
                 # Decode the token
                 token_meaning = self.tokenizer.decode(next_token_id,
@@ -107,7 +107,9 @@ class HFTransformersAutoBot(Chatbot):
                 response_text += token_meaning
 
                 # Check for occurrences of stop sequences
-                if self.check_stop_filters(stop_filters, response):
+                if self.check_stop_filters(stop_filters,
+                                           response_tokens,
+                                           response_text):
                     break
 
                 # Print the token
@@ -118,7 +120,7 @@ class HFTransformersAutoBot(Chatbot):
             print("", flush=True)
             sys.stdout.flush()
 
-        return response
+        return response_tokens
 
     def parse_stop_sequences(self, stop_sequences):
         """
@@ -144,11 +146,11 @@ class HFTransformersAutoBot(Chatbot):
 
         return stop_filters
 
-    def check_stop_filters(self, stop_filters, response):
+    def check_stop_filters(self, stop_filters, response_tokens, response_text):
         # Check for stop sequences that are token sequences
-        for stop_token_sequence in stop_filters["token_sequences"]:
-            if len(response) >= len(stop_token_sequence):
-                if response[-len(stop_token_sequence):] == stop_token_sequence:
+        for stop_token_seq in stop_filters["token_sequences"]:
+            if len(response_tokens) >= len(stop_token_seq):
+                if response_tokens[-len(stop_token_seq):] == stop_token_seq:
                     return True
 
         # Check for stop sequences that are regexes
