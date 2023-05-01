@@ -1,14 +1,10 @@
-import secretstorage
+import keyring
 
 class Chatbot:
     """
     A chatbot that can be used to send messages to and receive messages from
     a chatbot API.
     """
-
-    # Setup secretstorage:
-    _bus = secretstorage.dbus_init()
-    _collection = secretstorage.get_default_collection(_bus)
 
     name: str
     keeps_context: bool = False
@@ -18,12 +14,10 @@ class Chatbot:
         self.name = name
 
     def retrieve_key(self, api_name):
-        key_search = self._collection.search_items({'api': api_name})
-        key = next(key_search)
+        key = keyring.get_password('api', api_name)
 
         if key:
-            secret = key.get_secret().decode('utf-8')
-            return secret
+            return key
         else:
             return False
 
