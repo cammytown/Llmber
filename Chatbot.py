@@ -32,8 +32,9 @@ class Chatbot:
     def send_message(self,
                      message,
                      stop_sequences = [],
-                     #@REVISIT regex on every token is probably a bad idea, usually
-                     stop_regex = None):
+                     stop_regex = None,
+                     n_tokens = 128,
+                     ):
         raise NotImplementedError
         # response_message = self.api.send_request(message)
         # return response_message

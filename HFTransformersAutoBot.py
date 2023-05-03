@@ -34,7 +34,11 @@ class HFTransformersAutoBot(Chatbot):
         # Set the model to evaluation mode (disables dropout)
         self.model.eval()
 
-    def send_message(self, message, stop_sequences = [], stop_regex = None):
+    def send_message(self,
+                     message,
+                     stop_sequences = [],
+                     stop_regex = None,
+                     n_tokens = 128):
         # Tokenize message
         if message == "":
             message = " " #@SCAFFOLDING
@@ -50,7 +54,7 @@ class HFTransformersAutoBot(Chatbot):
             # print("inputs:", inputs)
 
         # Generate response
-        response = self.request_tokens(n_tokens=128,
+        response = self.request_tokens(n_tokens=n_tokens,
                                        stop_sequences=stop_sequences)
 
         # Decode the generated response

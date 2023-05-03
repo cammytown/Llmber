@@ -35,6 +35,6 @@ class AutoChatbot(Chatbot):
         self.name = self.chatbot.name
         self.keeps_context = self.chatbot.keeps_context
 
-    def send_message(self, message, stop_sequences = [], stop_regex = None):
-        return self.chatbot.send_message(message, stop_sequences, stop_regex)
+    def send_message(self, message, stop_sequences = [], stop_regex = None, n_tokens = 128):
+        return self.chatbot.send_message(message, stop_sequences, stop_regex, n_tokens)
 

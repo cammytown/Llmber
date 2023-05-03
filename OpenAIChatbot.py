@@ -31,7 +31,12 @@ class OpenAIChatbot(Chatbot):
         # self.openai_bot.set_presence_penalty(0)
         # self.openai_bot.set_stop(['\n', ' Human:', ' AI:'])
 
-    def send_message(self, message, stop_sequences = [], stop_regex = None):
+    def send_message(self,
+                     message,
+                     stop_sequences = [],
+                     stop_regex = None,
+                     n_tokens = 128):
+
         if __debug__:
             print("Sending message to OpenAI: {}".format(message))
 
@@ -41,7 +46,7 @@ class OpenAIChatbot(Chatbot):
             prompt = message,
 
             # Maximum number of tokens to generate
-            max_tokens = 1024,
+            max_tokens = n_tokens,
 
             # Variety of possible tokens
             # (OpenAI says temperature or top_p, not both)
