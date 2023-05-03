@@ -20,7 +20,9 @@ class HFTransformersAutoBot(Chatbot):
             raise ValueError("Invalid chatbot name: {name}")
 
         model_name = name.lower()
+
         cache_dir = "/run/media/cammy/PROJECTS2/huggingface_cache" #@SCAFFOLDING
+        # cache_dir = None
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=cache_dir)
         self.model = AutoModelForCausalLM.from_pretrained(model_name, cache_dir=cache_dir)

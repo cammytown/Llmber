@@ -1,4 +1,5 @@
 import keyring
+import appdirs
 
 class Chatbot:
     """
@@ -10,8 +11,15 @@ class Chatbot:
     keeps_context: bool = False
     # context: str = ""
 
-    def __init__(self, name):
+    logdir: str = ""
+
+    def __init__(self, name = "Chatbot", logdir = ""):
         self.name = name
+
+        if logdir:
+            self.logdir = logdir
+        else:
+            self.logdir = appdirs.user_log_dir('cammy', 'chatbots')
 
     def retrieve_key(self, api_name):
         key = keyring.get_password('api', api_name)
@@ -34,3 +42,11 @@ class Chatbot:
         raise NotImplementedError
         # response_message = self.api.request_tokens()
         # return response_message
+
+    def log(self, message, filename = None):
+        if not filename:
+            filename = self.name + "-log.txt"
+
+        # Log message to file
+        with open(f"{self.logdir}/{filename}", 'a') as logfile:
+            logfile.write(message + "\n")

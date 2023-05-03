@@ -1,3 +1,4 @@
+import os
 from collections import Counter
 import openai
 import json
@@ -17,7 +18,7 @@ class OpenAIChatbot(Chatbot):
         if openai_key:
             self.api.api_key = openai_key
         else:
-            print("ERROR: Couldn't retrieve OpenAI key")
+            raise Exception("Couldn't retrieve OpenAI key")
 
         self.model_config = model_config
 
@@ -91,19 +92,26 @@ class OpenAIChatbot(Chatbot):
     #     return response_message
 
     def log_usage(self, response_obj):
-        with open("chatbot-data/ChatGPT/request-usage.txt", "r+") as file:
-            # Read file
-            previous_usage = Counter(json.load(file))
+        filename = f"{self.logdir}/ChatGPT/request-usage.txt"
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
 
-            # Combine previous usage with query usage
-            request_usage = Counter(response_obj['usage'])
-            total_usage = dict(previous_usage + request_usage)
+        with open(filename, 'w+') as file:
+            if file.read() == '':
+                #@ is dict() necessary?
+                total_usage = Counter(response_obj['usage'])
+            else:
+                # Read file
+                previous_usage = Counter(json.load(file))
+
+                # Combine previous usage with query usage
+                request_usage = Counter(response_obj['usage'])
+                total_usage = previous_usage + request_usage
 
             # Reset file read cursor to start
             file.seek(0)
 
             # Write new total to file
-            json.dump(total_usage, file)
+            json.dump(dict(total_usage), file)
 
             # Remove file content after the cursor we just wrote up to
-            file.truncate();
+            file.truncate()
