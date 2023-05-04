@@ -1,25 +1,30 @@
 import sys
 import torch
 import re
+from typing import List
 from typing import Optional
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from .Chatbot import Chatbot
 
-class HFTransformersAutoBot(Chatbot):
+class HFTAutoBot(Chatbot):
     logits: Optional[torch.Tensor] = None
     past_key_values: Optional[torch.Tensor] = None
+    saved_contexts: List[tuple] = []
 
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self,
+                 name: str = "HFTAutoBot",
+                 model_config: dict = {}):
+
+        super().__init__(name, model_config = model_config)
 
         self.keeps_context = True
 
-        if not name:
-            raise ValueError("Invalid chatbot name: {name}")
+        if "name" not in model_config:
+            raise ValueError("model_config must contain a 'name' key")
 
-        model_name = name.lower()
+        model_name = model_config["name"].lower()
 
         cache_dir = "/run/media/cammy/PROJECTS2/huggingface_cache" #@SCAFFOLDING
         # cache_dir = None
@@ -39,23 +44,32 @@ class HFTransformersAutoBot(Chatbot):
                      stop_sequences = [],
                      stop_regex = None,
                      n_tokens = 128):
+
         # Tokenize message
         if message == "":
             message = " " #@SCAFFOLDING
 
-        inputs = self.tokenizer.encode(message, return_tensors="pt").to(self.model.device)
+        inputs = self.tokenizer.encode(message, return_tensors="pt") \
+                .to(self.model.device)
 
         # Add tokens to context
         self.add_tokens_to_context(inputs)
-        # self.add_tokens_to_context(inputs[0])
 
         if __debug__:
             print(message, flush=True, end="")
             # print("inputs:", inputs)
 
+        # Save context if necessary
+        if not self.keep_response_in_context:
+            self.save_context()
+
         # Generate response
         response = self.request_tokens(n_tokens=n_tokens,
                                        stop_sequences=stop_sequences)
+
+        # Restore context if necessary
+        if not self.keep_response_in_context:
+            self.restore_context()
 
         # Decode the generated response
         response_text = self.tokenizer.decode(response, skip_special_tokens=True)
@@ -64,6 +78,12 @@ class HFTransformersAutoBot(Chatbot):
         #     print("Response:", response_text)
 
         return response_text
+
+    def save_context(self):
+        self.saved_contexts.append((self.logits, self.past_key_values))
+
+    def restore_context(self):
+        self.logits, self.past_key_values = self.saved_contexts.pop()
 
     def add_tokens_to_context(self, tokens):
         """

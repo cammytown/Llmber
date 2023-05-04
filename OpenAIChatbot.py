@@ -1,4 +1,5 @@
 import os
+from enum import Enum
 from collections import Counter
 import openai
 import json
@@ -9,10 +10,15 @@ class OpenAIChatbot(Chatbot):
     model_config: dict
     api = openai
 
+    # Completion uses context, Chat uses message_history #@REVISIT architecture
+    context = ""
+    message_history = []
+
+    ModelType = Enum('Mode', ['completion', 'chat'])
+    model_type: ModelType
+
     def __init__(self, name = "OpenAI", model_config = { "name": "text-ada-001" }):
         super().__init__(name)
-
-        self.keeps_context = False
 
         openai_key = self.retrieve_key('openai')
         if openai_key:
@@ -21,6 +27,13 @@ class OpenAIChatbot(Chatbot):
             raise Exception("Couldn't retrieve OpenAI key")
 
         self.model_config = model_config
+
+        #@TODO we should probably first check a list of valid models and then
+        #@ warn user if they're using an unknown model before falling back on this
+        if model_config.name.startswith('text-'):
+            self.model_type = self.ModelType.completion
+        elif model_config.name.startswith('gpt-'):
+            self.model_type = self.ModelType.chat
 
         # self.openai_bot = OpenAIEngine(openai_key)
         # self.openai_bot.set_engine('davinci')
@@ -40,10 +53,21 @@ class OpenAIChatbot(Chatbot):
         if __debug__:
             print("Sending message to OpenAI: {}".format(message))
 
+        if self.model_type == self.ModelType.completion:
+            return self.send_completion(message, n_tokens)
+        elif self.model_type == self.ModelType.chat:
+            return self.send_chat_message(message)
+        else:
+            raise Exception("Unknown OpenAI model type")
+
+    def send_completion(self, message, n_tokens = 128):
+        # Add message to context
+        self.context += message
+
         # Send message to OpenAI
         response_obj = openai.Completion.create(
             model = self.model_config['name'],
-            prompt = message,
+            prompt = self.context,
 
             # Maximum number of tokens to generate
             max_tokens = n_tokens,
@@ -71,9 +95,31 @@ class OpenAIChatbot(Chatbot):
         # Parse response
         response_message = response_obj['choices'][0]['text']
 
+        # Add response to context if configured to
+        if self.keep_response_in_context:
+            self.context += response_message
+
         # Log usage
         self.log_usage(response_obj)
 
+        return response_message
+
+    def send_chat_message(self, message):
+        self.message_history.append({"role": "user", "content": message})
+
+        response_obj = openai.ChatCompletion.create(
+            model = self.model_config['name'],
+            messages = self.message_history
+        )
+
+        response_message = response_obj['choices'][0]['message']
+
+        self.message_history.append({"role": "assistant", "content": response_message})
+
+        # Log usage
+        self.log_usage(response_obj)
+
+        # Return response
         return response_message
 
     # def send_chat_message(self, user_message, system_message = None):

@@ -9,17 +9,27 @@ class Chatbot:
 
     name: str
     keeps_context: bool = False
+    keep_response_in_context: bool = True
     # context: str = ""
 
     logdir: str = ""
 
-    def __init__(self, name = "Chatbot", logdir = ""):
+    def __init__(self,
+                 name: str = "Chatbot",
+                 logdir: str = "",
+                 model_config: dict = {}):
         self.name = name
 
         if logdir:
             self.logdir = logdir
         else:
             self.logdir = appdirs.user_log_dir('cammy', 'chatbots')
+
+        # Parse model_config
+        options = [ "keep_response_in_context" ]
+        for option, value in model_config.items():
+            if option in options:
+                setattr(self, option, value) #@REVISIT
 
     def retrieve_key(self, api_name):
         key = keyring.get_password('api', api_name)

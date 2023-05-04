@@ -50,8 +50,8 @@ class RWKVChatbot(Chatbot):
 
     # all_tokens: list = [] #@REVISIT naming
 
-    def __init__(self, name = "RWKV"):
-        super().__init__(name)
+    def __init__(self, name: str = "RWKV", model_config: dict = {}):
+        super().__init__(name, model_config)
 
         self.keeps_context = True
 

@@ -13,8 +13,8 @@ def progress_callback(progress):
 class LlamaCPPChatbot(Chatbot):
     model: llamacpp.LlamaInference
 
-    def __init__(self, name = "LlamaCPP"):
-        super().__init__(name)
+    def __init__(self, name = "LlamaCPP", model_config: dict = {}):
+        super().__init__(name, model_config = model_config)
 
         self.keeps_context = True
 
