@@ -26,7 +26,7 @@ class Chatbot:
         if logdir != "":
             self.logdir = logdir
         else:
-            self.logdir = appdirs.user_log_dir('cammy', 'chatbots')
+            self.logdir = appdirs.user_log_dir('llmber', 'llmber')
 
         # Parse model_config
         self.validate_model_config(model_config)

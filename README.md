@@ -2,6 +2,14 @@ Under heavy development.
 
 A chatbot interaction abstraction.
 
-# TODO
-- Make Chatbot.py very clear for anyone who wants to write an implementation
-- ensure options like keep_response_in_context are followed by all classes; maybe come up with some mechanism by which options for specific classes are validated; i.e. derived class has valid_options attribute and parent has validate_options method
+# Todo
+- implement OpenAI chat model api
+
+# How to Say It
+However you like.
+
+"Lumber", as in a basic material for construction of more complex structures.
+
+"LL Ember", as in the glowing potential of energy and the fire of spirit.
+
+"Limber", as in with ease of movement.
