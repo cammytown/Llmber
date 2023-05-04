@@ -13,10 +13,10 @@ def progress_callback(progress):
 class LlamaCPPChatbot(Chatbot):
     model: llamacpp.LlamaInference
 
-    def __init__(self, name = "LlamaCPP", model_config: dict = {}):
-        super().__init__(name, model_config = model_config)
+    def __init__(self, name = "LlamaCPP", model_config: dict = {}, logdir = ""):
+        super().__init__(name, model_config = model_config, logdir = "")
 
-        self.keeps_context = True
+        self.keep_context = True
 
         # Create the inference parameters
         params = llamacpp.InferenceParams.default_with_callback(progress_callback)

@@ -7,7 +7,11 @@ import json
 from .Chatbot import Chatbot
 
 class OpenAIChatbot(Chatbot):
-    model_config: dict
+    valid_options = ["name",
+                     "remote",
+                     "keep_context",
+                     "keep_response_in_context"]
+
     api = openai
 
     # Completion uses context, Chat uses message_history #@REVISIT architecture
@@ -17,8 +21,14 @@ class OpenAIChatbot(Chatbot):
     ModelType = Enum('Mode', ['completion', 'chat'])
     model_type: ModelType
 
-    def __init__(self, name = "OpenAI", model_config = { "name": "text-ada-001" }):
-        super().__init__(name)
+    def __init__(self,
+                 name = "OpenAI",
+                 model_config = { "name": "text-ada-001" },
+                 logdir = ""):
+
+        super().__init__(name, model_config, logdir)
+
+        self.keep_context = False
 
         openai_key = self.retrieve_key('openai')
         if openai_key:
@@ -30,9 +40,9 @@ class OpenAIChatbot(Chatbot):
 
         #@TODO we should probably first check a list of valid models and then
         #@ warn user if they're using an unknown model before falling back on this
-        if model_config.name.startswith('text-'):
+        if model_config["name"].startswith('text-'):
             self.model_type = self.ModelType.completion
-        elif model_config.name.startswith('gpt-'):
+        elif model_config["name"].startswith('gpt-'):
             self.model_type = self.ModelType.chat
 
         # self.openai_bot = OpenAIEngine(openai_key)
@@ -50,8 +60,8 @@ class OpenAIChatbot(Chatbot):
                      stop_regex = None,
                      n_tokens = 128):
 
-        if __debug__:
-            print("Sending message to OpenAI: {}".format(message))
+        # if __debug__:
+        #     print("Sending message to OpenAI: {}".format(message))
 
         if self.model_type == self.ModelType.completion:
             return self.send_completion(message, n_tokens)
@@ -61,8 +71,16 @@ class OpenAIChatbot(Chatbot):
             raise Exception("Unknown OpenAI model type")
 
     def send_completion(self, message, n_tokens = 128):
-        # Add message to context
-        self.context += message
+        if self.keep_context:
+            # Add message to context
+            self.context += message
+        else:
+            # Replace context with message
+            self.context = message
+
+        # print("=== OpenAI context ===")
+        # print(self.context)
+        # print("--- END OpenAI message ---")
 
         # Send message to OpenAI
         response_obj = openai.Completion.create(
@@ -89,7 +107,7 @@ class OpenAIChatbot(Chatbot):
             # stop = ['\n']
         )
 
-        print("OpenAI response:")
+        print("=== OpenAI response ===")
         print(response_obj)
 
         # Parse response
@@ -104,12 +122,15 @@ class OpenAIChatbot(Chatbot):
 
         return response_message
 
-    def send_chat_message(self, message):
+    def send_chat_message(self, message, n_tokens = 128):
+        raise Exception("Chat model not implemented yet")
+
         self.message_history.append({"role": "user", "content": message})
 
         response_obj = openai.ChatCompletion.create(
             model = self.model_config['name'],
-            messages = self.message_history
+            messages = self.message_history,
+            max_tokens = n_tokens,
         )
 
         response_message = response_obj['choices'][0]['message']

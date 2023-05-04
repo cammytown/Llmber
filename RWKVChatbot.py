@@ -50,10 +50,10 @@ class RWKVChatbot(Chatbot):
 
     # all_tokens: list = [] #@REVISIT naming
 
-    def __init__(self, name: str = "RWKV", model_config: dict = {}):
-        super().__init__(name, model_config)
+    def __init__(self, name: str = "RWKV", model_config: dict = {}, logdir: str = ""):
+        super().__init__(name, model_config=model_config, logdir=logdir)
 
-        self.keeps_context = True
+        self.keep_context = True
 
         model_path = '/run/media/cammy/PROJECTS2/models/rwkv-4-raven/RWKV-4-Raven-1B5-v9-Eng99%-Other1%-20230411-ctx4096.pth'
         # model_path = '/run/media/cammy/PROJECTS2/models/rwkv-4-raven/RWKV-4-Raven-7B-v9-Eng99%-Other1%-20230412-ctx8192.pth'

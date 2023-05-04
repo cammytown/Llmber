@@ -9,17 +9,21 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from .Chatbot import Chatbot
 
 class HFTAutoBot(Chatbot):
+    valid_options = ["name",
+                     "keep_response_in_context"]
+
     logits: Optional[torch.Tensor] = None
     past_key_values: Optional[torch.Tensor] = None
     saved_contexts: List[tuple] = []
 
     def __init__(self,
                  name: str = "HFTAutoBot",
-                 model_config: dict = {}):
+                 model_config: dict = {},
+                 logdir: str = ""):
 
-        super().__init__(name, model_config = model_config)
+        super().__init__(name, model_config = model_config, logdir = logdir)
 
-        self.keeps_context = True
+        self.keep_context = True
 
         if "name" not in model_config:
             raise ValueError("model_config must contain a 'name' key")

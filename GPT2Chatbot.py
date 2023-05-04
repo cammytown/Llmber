@@ -13,7 +13,7 @@ class HuggingFaceAutoChatbot(Chatbot):
     def __init__(self, name = "GPT2"):
         super().__init__(name)
 
-        self.keeps_context = True
+        self.keep_context = True
 
         # model_name = "PygmalionAI/pygmalion-350m"
         # model_name = "gpt2-large"

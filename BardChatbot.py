@@ -4,10 +4,10 @@ from . import Chatbot
 class BardChatbot(Chatbot):
     api: Bard.Chatbot
 
-    def __init__(self, name = "Bard"):
+    def __init__(self, name = "Bard", model_config = {}, logdir = ""):
         super().__init__(name)
 
-        self.keeps_context = True
+        self.keep_context = True
 
         # Retrieve Google Bard key:
         googlebard_key = self.retrieve_key('googlebard')
