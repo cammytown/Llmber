@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "llmber"
+version = "0.1.0"
+description = "A library abstracting the nuances of LLM interaction."
+authors = ["Cammy <cameronsteele@steelecameron.com>"]
+readme = "README.md"
+packages = [
+	{ include = "llmber", from = "src" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
