@@ -3,6 +3,7 @@ Under heavy development.
 A chatbot interaction abstraction.
 
 # Todo
+- implement repetition penalty
 - implement OpenAI chat model api
 
 # How to Say It

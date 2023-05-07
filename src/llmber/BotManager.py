@@ -4,17 +4,17 @@ import subprocess
 from datetime import datetime
 import asyncio
 
-# from Chatbot import Chatbot
-from BardChatbot import BardChatbot
-from OpenAIChatbot import OpenAIChatbot
-from AlpacaChatbot import AlpacaChatbot
+from .Chatbot import Chatbot
+from .BardChatbot import BardChatbot
+from .OpenAIChatbot import OpenAIChatbot
+from .AlpacaChatbot import AlpacaChatbot
 
-from CoquiImp import CoquiImp
+from coqui_imp import CoquiImp
 
 class BotManager:
     tts = CoquiImp()
 
-    bots: Dict[str, Type[Chatbot]] = {}
+    bots: dict = {}
 
     processing_requests = False
     request_queue = []
@@ -28,9 +28,10 @@ class BotManager:
         print('bot init')
 
         # Load chatbots:
-        bots["openai"] = OpenAIChatbot()
-        bots["googlebard"] = BardChatbot()
-        bots["alpaca"] = AlpacaChatbot()
+        #@TODO load on demand
+        self.bots["openai"] = OpenAIChatbot()
+        self.bots["googlebard"] = BardChatbot()
+        self.bots["alpaca"] = AlpacaChatbot()
 
         # Test TTS:
         self.sayFile('greeting.txt')
@@ -150,7 +151,7 @@ class BotManager:
     #@REVISIT naming:
     def send_message_to_bot(self, bot_name: str, user_message: str):
         # Select bot:
-        chatbot = bots[bot_name]
+        chatbot = self.bots[bot_name]
 
         if chatbot == None:
             raise Exception(f"ERROR: unhandled bot_name {bot_name}")

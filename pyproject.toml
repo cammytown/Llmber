@@ -4,12 +4,14 @@ version = "0.1.0"
 description = "A library abstracting the nuances of LLM interaction."
 authors = ["Cammy <cameronsteele@steelecameron.com>"]
 readme = "README.md"
-packages = [
-	{ include = "llmber", from = "src" },
-]
+packages = [ { include = "llmber", from = "src" }, ]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+keyring = "^23.13.1"
+torch = "^2.0.0"
+transformers = "^4.28.1"
+openai = "^0.27.5"
 
 [build-system]
 requires = ["poetry-core"]
