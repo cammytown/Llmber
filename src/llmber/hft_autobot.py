@@ -6,10 +6,10 @@ from typing import Optional
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from .Chatbot import Chatbot
+from .chatbot import Chatbot
 
 class HFTAutoBot(Chatbot):
-    valid_options = ["name",
+    valid_options = ["model",
                      "keep_response_in_context"]
 
     logits: Optional[torch.Tensor] = None
@@ -17,18 +17,18 @@ class HFTAutoBot(Chatbot):
     saved_contexts: List[tuple] = []
 
     def __init__(self,
-                 name: str = "HFTAutoBot",
+                 model: str = "HFTAutoBot",
                  model_config: dict = {},
                  logdir: str = ""):
 
-        super().__init__(name, model_config = model_config, logdir = logdir)
+        super().__init__(model, model_config = model_config, logdir = logdir)
 
         self.keep_context = True
 
-        if "name" not in model_config:
-            raise ValueError("model_config must contain a 'name' key")
+        if "model" not in model_config:
+            raise ValueError("model_config must contain a 'model' key")
 
-        model_name = model_config["name"].lower()
+        model_name = model_config["model"].lower()
 
         cache_dir = "/run/media/cammy/PROJECTS2/huggingface_cache" #@SCAFFOLDING
         # cache_dir = None

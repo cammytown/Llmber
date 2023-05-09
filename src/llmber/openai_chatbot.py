@@ -4,10 +4,10 @@ from collections import Counter
 import openai
 import json
 
-from .Chatbot import Chatbot
+from .chatbot import Chatbot
 
 class OpenAIChatbot(Chatbot):
-    valid_options = ["name",
+    valid_options = ["model",
                      "remote",
                      "keep_context",
                      "keep_response_in_context"]
@@ -23,10 +23,10 @@ class OpenAIChatbot(Chatbot):
 
     def __init__(self,
                  name = "OpenAI",
-                 model_config = { "name": "text-ada-001" },
+                 model_config = { "model": "text-ada-001" },
                  logdir = ""):
 
-        super().__init__(name, model_config, logdir)
+        super().__init__(model, model_config, logdir)
 
         self.keep_context = False
 
@@ -40,9 +40,9 @@ class OpenAIChatbot(Chatbot):
 
         #@TODO we should probably first check a list of valid models and then
         #@ warn user if they're using an unknown model before falling back on this
-        if model_config["name"].startswith('text-'):
+        if model_config["model"].startswith('text-'):
             self.model_type = self.ModelType.completion
-        elif model_config["name"].startswith('gpt-'):
+        elif model_config["model"].startswith('gpt-'):
             self.model_type = self.ModelType.chat
 
         # self.openai_bot = OpenAIEngine(openai_key)
@@ -84,7 +84,7 @@ class OpenAIChatbot(Chatbot):
 
         # Send message to OpenAI
         response_obj = openai.Completion.create(
-            model = self.model_config['name'],
+            model = self.model_config['model'],
             prompt = self.context,
 
             # Maximum number of tokens to generate
@@ -128,7 +128,7 @@ class OpenAIChatbot(Chatbot):
         self.message_history.append({"role": "user", "content": message})
 
         response_obj = openai.ChatCompletion.create(
-            model = self.model_config['name'],
+            model = self.model_config['model'],
             messages = self.message_history,
             max_tokens = n_tokens,
         )
@@ -148,7 +148,7 @@ class OpenAIChatbot(Chatbot):
     #         system_message = "You are a helpful assistant."
 
     #     response_obj = openai.ChatCompletion.create(
-    #       model=self.model_config['name'],
+    #       model=self.model_config['model'],
     #       messages=[
     #             {"role": "system", "content": system_message},
     #             {"role": "user", "content": user_message},

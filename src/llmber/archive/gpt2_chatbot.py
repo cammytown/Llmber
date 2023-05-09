@@ -4,20 +4,20 @@ from typing import Optional
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from .Chatbot import Chatbot
+from .chatbot import Chatbot
 
 class HuggingFaceAutoChatbot(Chatbot):
     logits: Optional[torch.Tensor] = None
     past_key_values: Optional[torch.Tensor] = None
 
-    def __init__(self, name = "GPT2"):
+    def __init__(self, model = "GPT2"):
         super().__init__(name)
 
         self.keep_context = True
 
         # model_name = "PygmalionAI/pygmalion-350m"
         # model_name = "gpt2-large"
-        model_name = name.lower()
+        model_name = model.lower()
         cache_dir = "/run/media/cammy/PROJECTS2/huggingface_cache" #@SCAFFOLDING
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=cache_dir)

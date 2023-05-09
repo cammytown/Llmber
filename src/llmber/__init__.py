@@ -1,4 +1,4 @@
-# from .Chatbot import Chatbot
+# from .chatbot import Chatbot
 # from .AutoChatbot import AutoChatbot
 # from .HFTAutoBot import HFTAutoBot
 

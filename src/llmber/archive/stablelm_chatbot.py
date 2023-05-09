@@ -1,7 +1,7 @@
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, StoppingCriteria, StoppingCriteriaList
 
-from Chatbot import Chatbot
+from .chatbot import Chatbot
 
 class StableLMChatbot(Chatbot):
     def __init__(self, name = "StableLMChatbot"):

@@ -1,4 +1,4 @@
-from .Chatbot import Chatbot
+from .chatbot import Chatbot
 
 class AlpacaChatbot(Chatbot):
     def __init__(self, name = "Alpaca"):

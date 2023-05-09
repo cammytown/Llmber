@@ -1,4 +1,4 @@
-from .Chatbot import Chatbot
+from .chatbot import Chatbot
 
 class AutoChatbot(Chatbot):
     """
@@ -6,22 +6,22 @@ class AutoChatbot(Chatbot):
     a LLM. Automatically selects chatbot based on model_config.
     """
 
-    valid_options = ["name",
+    valid_options = ["model",
                      "remote",
                      "keep_context",
                      "keep_response_in_context"]
     chatbot: Chatbot
 
     def __init__(self,
-                 name = "AutoChatbot",
+                 model = "AutoChatbot",
                  logdir = "",
-                 model_config: dict = { "name": "gpt2" }):
+                 model_config: dict = { "model": "gpt2" }):
 
-        super().__init__(name, model_config = model_config, logdir = logdir)
+        super().__init__(model, model_config = model_config, logdir = logdir)
 
         # If model is to be run locally
         if "remote" not in model_config or not model_config["remote"]:
-            match model_config["name"].lower():
+            match model_config["model"].lower():
                 case "gpt2" | "pygmalion" | "decapoda-research/llama-7b-hf":
                     from .HFTAutoBot import HFTAutoBot
                     bot_class = HFTAutoBot
@@ -32,7 +32,7 @@ class AutoChatbot(Chatbot):
                     from .LlamaCPPChatbot import LlamaCPPChatbot
                     bot_class = LlamaCPPChatbot
                 case _:
-                    raise ValueError(f"Invalid local chatbot name: {name}")
+                    raise ValueError(f"Invalid local chatbot model: {model}")
 
         # If model is to be run remotely
         else:
@@ -44,12 +44,12 @@ class AutoChatbot(Chatbot):
                 #     from .BardChatbot import BardChatbot
                 #     bot_class = BardChatbot()
                 case _:
-                    raise ValueError(f"Invalid remote chatbot name: {name}")
+                    raise ValueError(f"Invalid remote chatbot model: {model}")
 
         self.chatbot = bot_class(model_config=model_config, logdir=logdir)
 
         #@REVISIT:
-        self.name = self.chatbot.name
+        self.model = self.chatbot.model
         self.keep_context = self.chatbot.keep_context
         self.keep_response_in_context = self.chatbot.keep_response_in_context
 

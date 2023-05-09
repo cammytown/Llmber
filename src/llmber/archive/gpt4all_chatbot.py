@@ -1,4 +1,4 @@
-from .Chatbot import Chatbot
+from .chatbot import Chatbot
 from nomic.gpt4all import GPT4All
 
 class GPT4AllChatbot(Chatbot):

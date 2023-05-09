@@ -1,7 +1,7 @@
 import sys
 import subprocess
 from llama_cpp import Llama
-from .Chatbot import Chatbot
+from .chatbot import Chatbot
 
 #@REVISIT placement
 def progress_callback(progress):

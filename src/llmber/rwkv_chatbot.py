@@ -37,7 +37,7 @@ os.environ["RWKV_CUDA_ON"] = '1' # '1' to compile CUDA kernel (10x faster), requ
 from rwkv.model import RWKV
 from rwkv.utils import PIPELINE, PIPELINE_ARGS
 
-from .Chatbot import Chatbot
+from .chatbot import Chatbot
 
 class RWKVChatbot(Chatbot):
     model: RWKV
