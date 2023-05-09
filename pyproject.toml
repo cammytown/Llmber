@@ -1,18 +1,21 @@
-[tool.poetry]
+[project]
 name = "llmber"
 version = "0.1.0"
 description = "A library abstracting the nuances of LLM interaction."
-authors = ["Cammy <cameronsteele@steelecameron.com>"]
+authors = [
+	{ name = "Cammy", email = "cameronsteele@steelecameron.com" }
+]
 readme = "README.md"
-packages = [ { include = "llmber", from = "src" }, ]
-
-[tool.poetry.dependencies]
-python = "^3.10"
-keyring = "^23.13.1"
-torch = "^2.0.0"
-transformers = "^4.28.1"
-openai = "^0.27.5"
+dependencies = [
+	"python >=3.9,<3.11",
+	"appdirs >= 1.4.4",
+	"keyring >= 23.13.1",
+	"torch >= 2.0.0",
+	"transformers >= 4.28.1",
+	"openai >= 0.27.5",
+	"googlebard >= 1.0.0",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools >= 67.7.2"]
+build-backend = "setuptools.build_meta"
