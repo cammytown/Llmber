@@ -6,14 +6,14 @@ authors = [
 	{ name = "Cammy", email = "cameronsteele@steelecameron.com" }
 ]
 readme = "README.md"
+requires-python = ">=3.9.0,<3.11"
 dependencies = [
-	"python >=3.9,<3.11",
-	"appdirs >= 1.4.4",
-	"keyring >= 23.13.1",
-	"torch >= 2.0.0",
-	"transformers >= 4.28.1",
-	"openai >= 0.27.5",
-	"googlebard >= 1.0.0",
+	"appdirs >=1.4.4",
+	"keyring >=23.13.1",
+	"torch >=2.0.0",
+	"transformers >=4.28.1",
+	"openai >=0.27.5",
+	"googlebard >=1.0.0",
 ]
 
 [build-system]
