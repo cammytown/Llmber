@@ -16,6 +16,11 @@ dependencies = [
 	"googlebard >=1.0.0",
 ]
 
+[project.optional-dependencies]
+llamacpp = [
+	"llama-cpp-python >=0.1.48",
+]
+
 [build-system]
-requires = ["setuptools >= 67.7.2"]
+requires = ["setuptools >= 67.7.2", "wheel"]
 build-backend = "setuptools.build_meta"

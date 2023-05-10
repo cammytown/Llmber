@@ -1,6 +1,8 @@
 import sys
 import subprocess
-from llama_cpp import Llama
+import llamacpp
+# from llama_cpp import Llama
+
 from .chatbot import Chatbot
 
 #@REVISIT placement
@@ -9,48 +11,55 @@ def progress_callback(progress):
     sys.stdout.flush()
 
 class LlamaCPPChatbot(Chatbot):
-    model: Llama
+    model: llamacpp.LlamaInference
 
-    def __init__(self, name = "LlamaCPP"):
-        super().__init__(name)
+    def __init__(self, name = "LlamaCPP", model_config: dict = {}, logdir = ""):
+        super().__init__(name, model_config = model_config, logdir = "")
 
-        raise Exception("LlamaCPPChatbot is not yet implemented.")
+        self.keep_context = True
 
-        self.model = Llama(
-            # Set the model path
-            # path_model = '/mnt/Files/src/llama.cpp/models/gpt4all-7B/gpt4all-lora-converted.bin'
-            path_model = '/mnt/Files/src/llama.cpp/models/gpt4all-7B/gpt4all-lora-unfiltered-converted.bin'
+        # Create the inference parameters
+        params = llamacpp.InferenceParams.default_with_callback(progress_callback)
 
-            # Set the number of threads
-            # n_threads = 8
+        # Set the model path
+        #@TODO-3:
+        params.path_model = '/src/llama.cpp/models/gpt4all-7B/gpt4all-lora-unfiltered-converted.bin'
 
-            # # Reuse the last n tokens
-            # repeat_last_n = 64
+        # Set the number of threads
+        params.n_threads = 8
 
-            # # Set the number of predictions
-            # n_predict = 256
+        # Reuse the last n tokens
+        params.repeat_last_n = 64
 
-            # # Set context size
-            # n_ctx = 1024
+        # Set the number of predictions
+        params.n_predict = 256
 
-            # # Set batch size
-            # n_batch = 8
+        # Set context size
+        params.n_ctx = 1024
 
-            # # Set the top-k sampling
-            # top_k = 40
+        # Set batch size
+        params.n_batch = 8
 
-            # # Set the top-p sampling
-            # top_p = 0.9
+        # Set the top-k sampling
+        params.top_k = 40
 
-            # # Set the temperature
-            # temp = 0.8
+        # Set the top-p sampling
+        params.top_p = 0.9
 
-            # # Set the repetition penalty
-            # repeat_penalty = 1.3
+        # Set the temperature
+        params.temp = 0.8
 
-            # # Set the seed
-            # seed = -1
-        )
+        # Set the repetition penalty
+        params.repeat_penalty = 1.3
+
+        # Set the seed
+        params.seed = -1
+
+        # Initialize the model
+        self.model = llamacpp.LlamaInference(params)
+
+        if not self.model: #@REVISIT does this do anything?
+            raise Exception("Model failed to initialize")
 
     #@REVISIT n_tokens and n_predict seem at odds; will be confusing
     def request_tokens(self, n_tokens = 256):
@@ -103,8 +112,17 @@ class LlamaCPPChatbot(Chatbot):
         return token_string
 
     def send_message(self, message):
+        # Tokenize the message
+        prompt_tokens = self.model.tokenize(message, True)
+
+        # Supply the tokenized prompt
+        self.model.update_input(prompt_tokens)
+
+        # Ingest the prompt
+        self.model.ingest_all_pending_input()
+
         # Generate tokens
-        response_message = self.model()
+        response_message = self.request_tokens()
 
         return response_message
 

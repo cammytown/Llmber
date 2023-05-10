@@ -1,11 +1,12 @@
+from .auto_chatbot import AutoChatbot
+
 # from .chatbot import Chatbot
-# from .AutoChatbot import AutoChatbot
-# from .HFTAutoBot import HFTAutoBot
+# from .hft_autobot import HFTAutoBot
 
-# from .BotManager import BotManager
-# from .LlamaCPPChatbot import LlamaCPPChatbot
-# from .RWKVChatbot import RWKVChatbot
+# from .bot_manager import BotManager
+# from .llamacpp_chatbot import LlamaCPPChatbot
+# from .rwkv_chatbot import RWKVChatbot
 
-# from .OpenAIChatbot import OpenAIChatbot
-# from .BardChatbot import BardChatbot
-# from .GPT4AllChatbot import GPT4AllChatbot
+# from .openai_chatbot import OpenAIChatbot
+# from .bard_chatbot import BardChatbot
+# from .gpt4all_chatbot import GPT4AllChatbot

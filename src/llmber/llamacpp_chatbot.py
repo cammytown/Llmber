@@ -1,129 +1,169 @@
 import sys
 import subprocess
-import llamacpp
-# from llama_cpp import Llama
-
+from llama_cpp import Llama
 from .chatbot import Chatbot
 
 #@REVISIT placement
-def progress_callback(progress):
-    print("Progress: {:.2f}%".format(progress * 100))
-    sys.stdout.flush()
+# def progress_callback(progress):
+#     print("Progress: {:.2f}%".format(progress * 100))
+#     sys.stdout.flush()
 
 class LlamaCPPChatbot(Chatbot):
-    model: llamacpp.LlamaInference
+    model: Llama
+    saved_states: list = []
 
-    def __init__(self, name = "LlamaCPP", model_config: dict = {}, logdir = ""):
-        super().__init__(name, model_config = model_config, logdir = "")
+    def __init__(self,
+                 model_config: dict = {},
+                 logdir = ""):
 
-        self.keep_context = True
+        super().__init__(model_config = model_config, logdir = "")
 
-        # Create the inference parameters
-        params = llamacpp.InferenceParams.default_with_callback(progress_callback)
+        self.model = Llama(
+            # Set the model path
+            #@TODO-3 placeholder path
+            model_path = '/mnt/Files/src/llama.cpp/models/gpt4all-7B/gpt4all-lora-unfiltered-converted.bin',
+            # model_path = '/mnt/Files/src/llama.cpp/models/gpt4all-7B/gpt4all-lora-converted.bin',
 
-        # Set the model path
-        # params.path_model = '/mnt/Files/src/llama.cpp/models/gpt4all-7B/gpt4all-lora-converted.bin'
-        params.path_model = '/mnt/Files/src/llama.cpp/models/gpt4all-7B/gpt4all-lora-unfiltered-converted.bin'
+            # Set context size
+            n_ctx = 1024,
 
-        # Set the number of threads
-        params.n_threads = 8
+            # Set the seed
+            seed = -1,
 
-        # Reuse the last n tokens
-        params.repeat_last_n = 64
+            # Set the number of threads
+            n_threads = 8,
+        )
 
-        # Set the number of predictions
-        params.n_predict = 256
+        # # Reuse the last n tokens
+        # repeat_last_n = 64
 
-        # Set context size
-        params.n_ctx = 1024
+        # # Set the number of predictions
+        # n_predict = 256
 
-        # Set batch size
-        params.n_batch = 8
 
-        # Set the top-k sampling
-        params.top_k = 40
+        # # Set batch size
+        # n_batch = 8
 
-        # Set the top-p sampling
-        params.top_p = 0.9
+        # # Set the top-k sampling
+        # top_k = 40
 
-        # Set the temperature
-        params.temp = 0.8
+        # # Set the top-p sampling
+        # top_p = 0.9
 
-        # Set the repetition penalty
-        params.repeat_penalty = 1.3
+        # # Set the temperature
+        # temp = 0.8
 
-        # Set the seed
-        params.seed = -1
+        # # Set the repetition penalty
+        # repeat_penalty = 1.3
 
-        # Initialize the model
-        self.model = llamacpp.LlamaInference(params)
+    def send_message(self,
+                     message: str,
+                     stop_sequences = [],
+                     stop_regex = None,
+                     n_tokens = 128):
 
-        if not self.model: #@REVISIT does this do anything?
-            raise Exception("Model failed to initialize")
+        # Tokenize message
+        if message == "":
+            message = " " #@SCAFFOLDING
 
-    #@REVISIT n_tokens and n_predict seem at odds; will be confusing
-    def request_tokens(self, n_tokens = 256):
-        token_string = ""
+        inputs = self.model.tokenize(message.encode("utf-8"))
 
-        # Sample (generate) tokens
-        print("Sampling...")
-        is_finished = False
-        n_output = 0
-        while n_output < n_tokens:
-            #@REVISIT is this doing something important?
-            self.model.eval()
+        # Add tokens to context
+        self.add_tokens_to_context(inputs)
 
-            if self.model.has_unconsumed_input():
-                self.model.ingest_all_pending_input()
-            else:
-                # Sample a token
-                token = self.model.sample()
+        if __debug__:
+            print(message, flush=True, end="")
 
-                # Convert the token to text
-                text = self.model.token_to_str(token)
+        # Save context if necessary
+        # if not self.keep_response_in_context:
+        #     self.save_context()
 
-                # Add the token to the string
-                token_string += text
+        # Generate response
+        response_tokens = self.request_tokens(n_tokens=n_tokens,
+                                              stop_sequences=stop_sequences)
 
-                # Print the token
-                print(text, end="", flush=True)
+        # Restore context if necessary
+        # if not self.keep_response_in_context:
+        #     self.restore_context()
 
-                n_output += 1
+        # Decode the generated response
+        response_text = self.model.detokenize(response_tokens).decode("utf-8")
 
-                # End of text token was found
-                is_finished = token == self.model.token_eos()
+        # if __debug__:
+        #     print("Response:", response_text)
 
-            # If reverse prompt is encountered
-            # if self.model.is_antiprompt_present()
-            #     is_finished = True
-        
-            if is_finished:
+        return response_text
+
+    def save_context(self):
+        self.saved_states.append(self.model.save_state())
+
+    def restore_context(self):
+        saved_state = self.saved_states.pop()
+        self.model.load_state(saved_state)
+
+    def add_tokens_to_context(self, tokens):
+        """
+        Add tokens to the model's current context.
+        """
+
+        self.model.eval(tokens)
+
+    def request_tokens(self, n_tokens = 128, stop_sequences = []):
+        # Generate one token at a time
+        response_tokens = []
+        response_text = "" #@REVISIT optimization? only use if regex is needed?
+
+        # Parse stop_sequences into a dictionary of filter types
+        # stop_filters = self.parse_stop_sequences(stop_sequences)
+
+        for i in range(n_tokens):
+            next_token = self.model.sample(temp=0.8,
+                                           top_k=30,
+                                           top_p=0.95,
+                                           repeat_penalty=1.3)
+
+            # next_token_id = next_token[0, -1].item()
+
+            # Turn next_token into something that can be fed into the model
+            # next_token = torch.tensor([[next_token_id]]).to(self.model.device)
+
+            # Check if token is beginning-of-sequence token
+            if next_token == self.model.token_bos():
+                continue
+
+            # Check if the token is end-of-sequence token
+            if next_token == self.model.token_eos():
                 break
 
-            # if self.model.is_finished()
-            #     self.model.reset_remaining_tokens()
-            #     is_interacting = True
+            # Add next token to context
+            self.add_tokens_to_context([next_token])
 
-        print("\n")
+            # Add token to response
+            response_tokens.append(next_token)
 
-        # Flush stdout
-        sys.stdout.flush()
+            # Decode the token and add to response text
+            token_meaning = self.model.detokenize([next_token]).decode("utf-8")
+            # print()
+            # print(f"token_meaning: {token_meaning}")
+            # print(f"next_token: {next_token}")
+            # print(f"bos: {self.model.token_bos()}")
+            # print(f"eos: {self.model.token_eos()}")
+            response_text += token_meaning
+            # break
 
-        return token_string
+            # Check for occurrences of stop sequences
+            #@TODO-4
+            # if self.check_stop_filters(stop_filters,
+            #                            response_tokens,
+            #                            response_text):
+            #     break
 
-    def send_message(self, message):
-        # Tokenize the message
-        prompt_tokens = self.model.tokenize(message, True)
+            # Print the token
+            if __debug__:
+                print(token_meaning, flush=True, end="")
 
-        # Supply the tokenized prompt
-        self.model.update_input(prompt_tokens)
+        if __debug__:
+            print("", flush=True)
+            sys.stdout.flush()
 
-        # Ingest the prompt
-        self.model.ingest_all_pending_input()
-
-        # Generate tokens
-        response_message = self.request_tokens()
-
-        return response_message
-
-
+        return response_tokens

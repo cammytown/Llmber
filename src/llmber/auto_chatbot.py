@@ -23,13 +23,13 @@ class AutoChatbot(Chatbot):
         if "remote" not in model_config or not model_config["remote"]:
             match model_config["model"].lower():
                 case "gpt2" | "pygmalion" | "decapoda-research/llama-7b-hf":
-                    from .HFTAutoBot import HFTAutoBot
+                    from .hft_autobot import HFTAutoBot
                     bot_class = HFTAutoBot
                 case "rwkv":
-                    from .RWKVChatbot import RWKVChatbot
+                    from .rwkv_chatbot import RWKVChatbot
                     bot_class = RWKVChatbot
                 case "llamacpp":
-                    from .LlamaCPPChatbot import LlamaCPPChatbot
+                    from .llamacpp_chatbot import LlamaCPPChatbot
                     bot_class = LlamaCPPChatbot
                 case _:
                     raise ValueError(f"Invalid local chatbot model: {model}")
@@ -38,10 +38,10 @@ class AutoChatbot(Chatbot):
         else:
             match model_config["remote"].lower():
                 case "openai":
-                    from .OpenAIChatbot import OpenAIChatbot
+                    from .openai_chatbot import OpenAIChatbot
                     bot_class = OpenAIChatbot
                 # case "bard":
-                #     from .BardChatbot import BardChatbot
+                #     from .bard_chatbot import BardChatbot
                 #     bot_class = BardChatbot()
                 case _:
                     raise ValueError(f"Invalid remote chatbot model: {model}")
