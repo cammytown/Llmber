@@ -22,5 +22,5 @@ llamacpp = [
 ]
 
 [build-system]
-requires = ["setuptools >= 67.7.2", "wheel"]
+requires = ["setuptools >= 67.7.2", "wheel >=0.40.0"]
 build-backend = "setuptools.build_meta"

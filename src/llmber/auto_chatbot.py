@@ -6,8 +6,8 @@ class AutoChatbot(Chatbot):
     a LLM. Automatically selects chatbot based on model_config.
     """
 
-    valid_options = ["model",
-                     "remote",
+    valid_options = ["engine",
+                     "model",
                      "keep_context",
                      "keep_response_in_context"]
     chatbot: Chatbot
@@ -15,36 +15,43 @@ class AutoChatbot(Chatbot):
     def __init__(self,
                  model = "AutoChatbot",
                  logdir = "",
-                 model_config: dict = { "model": "gpt2" }):
+                 model_config: dict = {
+                     "engine": "hft",
+                     "model": "gpt2"
+                     }):
 
-        super().__init__(model, model_config = model_config, logdir = logdir)
+        super().__init__(model,
+                         model_config = model_config,
+                         logdir = logdir)
 
-        # If model is to be run locally
-        if "remote" not in model_config or not model_config["remote"]:
-            match model_config["model"].lower():
-                case "gpt2" | "pygmalion" | "decapoda-research/llama-7b-hf":
-                    from .hft_autobot import HFTAutoBot
-                    bot_class = HFTAutoBot
-                case "rwkv":
-                    from .rwkv_chatbot import RWKVChatbot
-                    bot_class = RWKVChatbot
-                case "llamacpp":
-                    from .llamacpp_chatbot import LlamaCPPChatbot
-                    bot_class = LlamaCPPChatbot
-                case _:
-                    raise ValueError(f"Invalid local chatbot model: {model}")
+        # Get engine and remove from model_config
+        engine = model_config["engine"].lower()
+        model_config.pop("engine")
 
-        # If model is to be run remotely
-        else:
-            match model_config["remote"].lower():
-                case "openai":
-                    from .openai_chatbot import OpenAIChatbot
-                    bot_class = OpenAIChatbot
-                # case "bard":
-                #     from .bard_chatbot import BardChatbot
-                #     bot_class = BardChatbot()
-                case _:
-                    raise ValueError(f"Invalid remote chatbot model: {model}")
+        # Determine engine
+        match engine:
+            case "huggingface" | "hft" | "transformers" | "hft_autobot":
+                from .hft_autobot import HFTAutoBot
+                bot_class = HFTAutoBot
+
+            case "llamacpp":
+                from .llamacpp_chatbot import LlamaCPPChatbot
+                bot_class = LlamaCPPChatbot
+
+            case "rwkv":
+                from .rwkv_chatbot import RWKVChatbot
+                bot_class = RWKVChatbot
+
+            case "openai":
+                from .openai_chatbot import OpenAIChatbot
+                bot_class = OpenAIChatbot
+
+            # case "bard":
+            #     from .bard_chatbot import BardChatbot
+            #     bot_class = BardChatbot()
+
+            case _:
+                raise ValueError(f"Invalid local chatbot model: {model}")
 
         self.chatbot = bot_class(model_config=model_config, logdir=logdir)
 

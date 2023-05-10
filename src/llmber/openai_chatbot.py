@@ -8,7 +8,6 @@ from .chatbot import Chatbot
 
 class OpenAIChatbot(Chatbot):
     valid_options = ["model",
-                     "remote",
                      "keep_context",
                      "keep_response_in_context"]
 

@@ -27,6 +27,9 @@ class LlamaCPPChatbot(Chatbot):
             # Set context size
             n_ctx = 1024,
 
+            # Set batch size
+            n_batch = 512,
+
             # Set the seed
             seed = -1,
 
