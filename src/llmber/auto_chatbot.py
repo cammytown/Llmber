@@ -15,16 +15,20 @@ class AutoChatbot(Chatbot):
     def __init__(self,
                  model = "AutoChatbot",
                  logdir = "",
-                 model_config: dict = {
-                     "engine": "hft",
-                     "model": "gpt2"
-                     }):
+                 model_config: dict = {}):
 
         super().__init__(model,
                          model_config = model_config,
                          logdir = logdir)
 
         # Get engine and remove from model_config
+        if "engine" not in model_config:
+            # raise ValueError("AutoChatbot config requires 'engine'")
+            model_config["engine"] = "hft_autobot"
+
+        if "model" not in model_config:
+            raise ValueError("AutoChatbot config requires 'model'")
+
         engine = model_config["engine"].lower()
         model_config.pop("engine")
 

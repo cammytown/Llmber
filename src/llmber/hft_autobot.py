@@ -1,6 +1,5 @@
 import sys
 import torch
-import re
 from typing import List
 from typing import Optional
 
@@ -17,13 +16,14 @@ class HFTAutoBot(Chatbot):
     saved_contexts: List[tuple] = []
 
     def __init__(self,
-                 model: str = "HFTAutoBot",
                  model_config: dict = {},
                  logdir: str = ""):
 
-        super().__init__(model, model_config = model_config, logdir = logdir)
+        super().__init__(name="HFTAutoBot",
+                         model_config = model_config,
+                         logdir = logdir)
 
-        self.keep_context = True
+        self.keep_context = True #@TODO make option?
 
         if "model" not in model_config:
             raise ValueError("model_config must contain a 'model' key")
@@ -33,8 +33,14 @@ class HFTAutoBot(Chatbot):
         cache_dir = "/run/media/cammy/PROJECTS2/huggingface_cache" #@SCAFFOLDING
         # cache_dir = None
 
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=cache_dir)
-        self.model = AutoModelForCausalLM.from_pretrained(model_name, cache_dir=cache_dir)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name,
+                                                       cache_dir=cache_dir)
+
+        self.model = AutoModelForCausalLM.from_pretrained(model_name,
+                                                          cache_dir=cache_dir)
+
+        self.bos_token = self.tokenizer.bos_token_id
+        self.eos_token = self.tokenizer.eos_token_id
 
         # Set the model to half-precision floating point and move it to the GPU
         #@REVISIT make configurable?
@@ -43,45 +49,15 @@ class HFTAutoBot(Chatbot):
         # Set the model to evaluation mode (disables dropout)
         self.model.eval()
 
-    def send_message(self,
-                     message,
-                     stop_sequences = [],
-                     stop_regex = None,
-                     n_tokens = 128):
+        # Disable gradient calculation
+        torch.set_grad_enabled(False)
 
-        # Tokenize message
-        if message == "":
-            message = " " #@SCAFFOLDING
-
-        inputs = self.tokenizer.encode(message, return_tensors="pt") \
+    def tokenize(self, message):
+        return self.tokenizer.encode(message, return_tensors="pt") \
                 .to(self.model.device)
 
-        # Add tokens to context
-        self.add_tokens_to_context(inputs)
-
-        if __debug__:
-            print(message, flush=True, end="")
-            # print("inputs:", inputs)
-
-        # Save context if necessary
-        if not self.keep_response_in_context:
-            self.save_context()
-
-        # Generate response
-        response = self.request_tokens(n_tokens=n_tokens,
-                                       stop_sequences=stop_sequences)
-
-        # Restore context if necessary
-        if not self.keep_response_in_context:
-            self.restore_context()
-
-        # Decode the generated response
-        response_text = self.tokenizer.decode(response, skip_special_tokens=True)
-
-        # if __debug__:
-        #     print("Response:", response_text)
-
-        return response_text
+    def detokenize(self, tokens):
+        return self.tokenizer.decode(tokens, skip_special_tokens=True)
 
     def save_context(self):
         self.saved_contexts.append((self.logits, self.past_key_values))
@@ -94,111 +70,48 @@ class HFTAutoBot(Chatbot):
         Add tokens to the model's current context.
         """
 
-        with torch.no_grad():
-            # Generate new logits
-            outputs = self.model(tokens, past_key_values=self.past_key_values)
+        # If tokens is list
+        if isinstance(tokens, list): #@SCAFFOLDING
+            # Turn next_token into something that can be fed into the model
+            #@REVISIT I don't know why this is necessary
+            #@REVISIT I don't really know when .to() is necessary
+            tokens = torch.tensor([tokens]).to(self.model.device)
 
-            # Update the logits and past key values
-            self.logits = outputs.logits
-            self.past_key_values = outputs.past_key_values
+        # Generate new logits
+        outputs = self.model(tokens,
+                             past_key_values=self.past_key_values)
+
+        # Update the logits and past key values
+        self.logits = outputs.logits
+        self.past_key_values = outputs.past_key_values
+
+    def send_message(self,
+                     message,
+                     stop_sequences = [],
+                     stop_regex = None,
+                     n_tokens = 128):
+        return super().send_message(message,
+                             stop_sequences = stop_sequences,
+                             stop_regex = stop_regex,
+                             n_tokens = n_tokens)
 
     def request_tokens(self, n_tokens = 128, stop_sequences = []):
-        # Generate one token at a time
-        response_tokens = []
-        response_text = "" #@REVISIT optimization? only use if regex is needed?
+        return super().request_tokens(n_tokens = n_tokens,
+                                      stop_sequences = stop_sequences)
 
-        # Parse stop_sequences into a dictionary of filter types
-        stop_filters = self.parse_stop_sequences(stop_sequences)
-
-        with torch.no_grad():
-            for i in range(n_tokens):
-                next_token = self.sample(temperature=0.8, top_k=30, top_p=0.95)
-
-                next_token_id = next_token[0, -1].item()
-
-                # Turn next_token into something that can be fed into the model
-                next_token = torch.tensor([[next_token_id]]).to(self.model.device)
-
-                # Check if the token is an end-of-sequence token
-                if next_token_id == self.tokenizer.eos_token_id:
-                    break
-
-                # Add next token to context
-                self.add_tokens_to_context(next_token)
-
-                # Add token to response
-                response_tokens.append(next_token_id)
-
-                # Decode the token
-                token_meaning = self.tokenizer.decode(next_token_id,
-                                                      skip_special_tokens=True)
-
-                # Add token meaning to response text
-                response_text += token_meaning
-
-                # Check for occurrences of stop sequences
-                if self.check_stop_filters(stop_filters,
-                                           response_tokens,
-                                           response_text):
-                    break
-
-                # Print the token
-                if __debug__:
-                    print(token_meaning, flush=True, end="")
-
-        if __debug__:
-            print("", flush=True)
-            sys.stdout.flush()
-
-        return response_tokens
-
-    def parse_stop_sequences(self, stop_sequences):
-        """
-        Parse a list of stop sequences into a dictionary of filter types.
-        """
-
-        stop_filters = {
-            "token_sequences": [],
-            "regexes": []
-        }
-
-        for stop_sequence in stop_sequences:
-            # If stop sequence is a string
-            if isinstance(stop_sequence, str):
-                stop_tokens = self.tokenizer.encode(stop_sequence)
-                stop_filters["token_sequences"].append(stop_tokens)
-
-            # If stop sequence is a dict
-            elif isinstance(stop_sequence, dict):
-                match stop_sequence["type"]:
-                    case "regex":
-                        stop_filters["regexes"].append(stop_sequence["value"])
-
-        return stop_filters
-
-    def check_stop_filters(self, stop_filters, response_tokens, response_text):
-        # Check for stop sequences that are token sequences
-        for stop_token_seq in stop_filters["token_sequences"]:
-            if len(response_tokens) >= len(stop_token_seq):
-                if response_tokens[-len(stop_token_seq):] == stop_token_seq:
-                    return True
-
-        # Check for stop sequences that are regexes
-        for stop_regex in stop_filters["regexes"]:
-            if re.search(stop_regex, response_text):
-                return True
-
-        return False
-
-    def sample(self, temperature = 1.0, top_k = 0, top_p = 0.0):
+    def sample(self,
+               temp = 1.0,
+               top_k = 0,
+               top_p = 0.0,
+               repeat_penalty = 0) -> int:
         """
         Sample a token from the current logits.
         """
 
         # Apply temperature
-        logits = self.logits / temperature
+        logits = self.logits / temp
 
-        #@TODO implement repetition/etc. penalty
+        #@TODO-4 implement repetition/etc. penalty
 
         # Apply top-k
         if top_k > 0:
@@ -208,8 +121,12 @@ class HFTAutoBot(Chatbot):
 
         # Apply top-p
         if top_p > 0.0:
-            sorted_logits, sorted_indices = torch.sort(logits, descending=True, dim=-1)
-            cumulative_probs = torch.cumsum(torch.softmax(sorted_logits, dim=-1), dim=-1)
+            sorted_logits, sorted_indices = torch.sort(logits,
+                                                       descending=True,
+                                                       dim=-1)
+
+            cumulative_probs = torch.cumsum(torch.softmax(sorted_logits, dim=-1),
+                                            dim=-1)
 
             # Remove tokens with cumulative probability above the threshold
             sorted_indices_to_remove = cumulative_probs > top_p
@@ -225,17 +142,15 @@ class HFTAutoBot(Chatbot):
             # Set the logits to -inf
             logits[mask] = -float("Inf")
 
-        # Sample from the distribution
+        # Convert logits to probabilities
         probs = torch.softmax(logits, dim=-1)
 
-        # Squeeze the batch dimension
+        # Squeeze (remove) the batch dimension
         probs = probs.squeeze(0)
 
         # Pick the next token
-        token = torch.multinomial(probs, num_samples=1)
-
-        # Add batch dimension
-        token = token.unsqueeze(0)
+        token_tensor = torch.multinomial(probs, num_samples=1).long()
+        token = token_tensor[-1].item()
 
         # Return the sampled token
         return token
