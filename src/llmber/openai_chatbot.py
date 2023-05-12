@@ -25,8 +25,11 @@ class OpenAIChatbot(Chatbot):
                  model_config = { "model": "text-ada-001" },
                  logdir = ""):
 
-        super().__init__(model, model_config, logdir)
+        super().__init__(name = name,
+                         model_config = model_config,
+                         logdir = logdir)
 
+        self.is_remote = True
         self.keep_context = False
 
         openai_key = self.retrieve_key('openai')

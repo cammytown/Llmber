@@ -17,6 +17,7 @@ class Chatbot:
     bos_token: int
     eos_token: int
 
+    is_remote: bool = False
     keep_context: bool = False
     keep_response_in_context: bool = True
     # context: str = ""
@@ -66,6 +67,12 @@ class Chatbot:
         raise NotImplementedError
 
     def add_tokens_to_context(self, tokens):
+        raise NotImplementedError
+
+    def get_context(self):
+        raise NotImplementedError
+
+    def set_context(self, context):
         raise NotImplementedError
 
     def save_context(self):

@@ -59,11 +59,20 @@ class HFTAutoBot(Chatbot):
     def detokenize(self, tokens):
         return self.tokenizer.decode(tokens, skip_special_tokens=True)
 
+    def get_context(self):
+        return (self.logits, self.past_key_values)
+
+    def set_context(self, context):
+        self.logits, self.past_key_values = context
+
     def save_context(self):
-        self.saved_contexts.append((self.logits, self.past_key_values))
+        self.saved_contexts.append(self.get_context())
 
     def restore_context(self):
-        self.logits, self.past_key_values = self.saved_contexts.pop()
+        if len(self.saved_contexts) > 0:
+            self.set_context(self.saved_contexts.pop())
+        else:
+            print(f"WARN: No saved contexts to restore", file=sys.stderr)
 
     def add_tokens_to_context(self, tokens):
         """

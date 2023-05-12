@@ -7,6 +7,7 @@ class BardChatbot(Chatbot):
     def __init__(self, name = "Bard", model_config = {}, logdir = ""):
         super().__init__(name)
 
+        self.is_remote = True
         self.keep_context = True
 
         # Retrieve Google Bard key:

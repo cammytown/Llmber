@@ -64,6 +64,18 @@ class AutoChatbot(Chatbot):
         self.keep_context = self.chatbot.keep_context
         self.keep_response_in_context = self.chatbot.keep_response_in_context
 
+    def get_context(self):
+        return self.chatbot.get_context()
+
+    def set_context(self, context):
+        return self.chatbot.set_context(context)
+
+    def save_context(self):
+        return self.chatbot.save_context()
+
+    def restore_context(self):
+        return self.chatbot.restore_context()
+
     def send_message(self,
                      message,
                      stop_sequences = [],
