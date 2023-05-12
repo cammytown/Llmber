@@ -13,7 +13,6 @@ class LlamaCPPChatbot(Chatbot):
                      # "keep_context",
                      "keep_response_in_context"]
     model: Llama
-    saved_states: list = []
 
     def __init__(self,
                  model_config: dict = {},
@@ -64,12 +63,11 @@ class LlamaCPPChatbot(Chatbot):
                                     stop_regex = stop_regex,
                                     n_tokens = n_tokens)
 
-    def save_context(self):
-        self.saved_states.append(self.model.save_state())
+    def get_context(self):
+        return self.model.save_state()
 
-    def restore_context(self):
-        saved_state = self.saved_states.pop()
-        self.model.load_state(saved_state)
+    def set_context(self, context):
+        self.model.load_state(context)
 
     def add_tokens_to_context(self, tokens):
         """

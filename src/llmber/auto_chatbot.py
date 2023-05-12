@@ -26,8 +26,8 @@ class AutoChatbot(Chatbot):
             # raise ValueError("AutoChatbot config requires 'engine'")
             model_config["engine"] = "hft_autobot"
 
-        if "model" not in model_config:
-            raise ValueError("AutoChatbot config requires 'model'")
+        # if "model" not in model_config:
+        #     raise ValueError("AutoChatbot config requires 'model'")
 
         engine = model_config["engine"].lower()
         model_config.pop("engine")
@@ -55,7 +55,7 @@ class AutoChatbot(Chatbot):
             #     bot_class = BardChatbot()
 
             case _:
-                raise ValueError(f"Invalid local chatbot model: {model}")
+                raise ValueError(f"Invalid local chatbot engine: {engine}")
 
         self.chatbot = bot_class(model_config=model_config, logdir=logdir)
 

@@ -65,15 +65,6 @@ class HFTAutoBot(Chatbot):
     def set_context(self, context):
         self.logits, self.past_key_values = context
 
-    def save_context(self):
-        self.saved_contexts.append(self.get_context())
-
-    def restore_context(self):
-        if len(self.saved_contexts) > 0:
-            self.set_context(self.saved_contexts.pop())
-        else:
-            print(f"WARN: No saved contexts to restore", file=sys.stderr)
-
     def add_tokens_to_context(self, tokens):
         """
         Add tokens to the model's current context.

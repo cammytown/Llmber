@@ -14,6 +14,7 @@ class Chatbot:
 
     name: str
 
+    saved_contexts: list = []
     bos_token: int
     eos_token: int
 
@@ -76,10 +77,13 @@ class Chatbot:
         raise NotImplementedError
 
     def save_context(self):
-        raise NotImplementedError
+        self.saved_contexts.append(self.get_context())
 
     def restore_context(self):
-        raise NotImplementedError
+        if len(self.saved_contexts) > 0:
+            self.set_context(self.saved_contexts.pop())
+        else:
+            print(f"WARN: No saved contexts to restore", file=sys.stderr)
 
     def sample(self,
                temp = 0.8,
