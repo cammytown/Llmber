@@ -30,8 +30,8 @@ class HFTAutoBot(Chatbot):
 
         model_name = model_config["model"].lower()
 
-        cache_dir = "/run/media/cammy/PROJECTS2/huggingface_cache" #@SCAFFOLDING
-        # cache_dir = None
+        # cache_dir = "/run/media/cammy/PROJECTS2/huggingface_cache" #@SCAFFOLDING
+        cache_dir = None
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name,
                                                        cache_dir=cache_dir)
@@ -44,7 +44,15 @@ class HFTAutoBot(Chatbot):
 
         # Set the model to half-precision floating point and move it to the GPU
         #@REVISIT make configurable?
-        self.model.half().cuda()
+        self.model.half()
+        
+        # Check if GPU is available
+        if torch.cuda.is_available():
+            # Move the model to the GPU
+            self.model.cuda()
+        # else:
+        #     # Move the model to the CPU
+        #     self.model.cpu()
 
         # Set the model to evaluation mode (disables dropout)
         self.model.eval()
