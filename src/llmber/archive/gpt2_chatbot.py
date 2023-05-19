@@ -41,7 +41,7 @@ class HuggingFaceAutoChatbot(Chatbot):
             self.logits = outputs.logits
             self.past_key_values = outputs.past_key_values
 
-    def send_message(self, message, stop_sequences = [], stop_regex = None):
+    def send_message(self, message, stop_sequences = []):
         # Tokenize message
         if message == "":
             message = " " #@SCAFFOLDING

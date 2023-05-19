@@ -59,20 +59,19 @@ class OpenAIChatbot(Chatbot):
     def send_message(self,
                      message,
                      stop_sequences = [],
-                     stop_regex = None,
                      n_tokens = 128):
 
         # if __debug__:
         #     print("Sending message to OpenAI: {}".format(message))
 
         if self.model_type == self.ModelType.completion:
-            return self.send_completion(message, n_tokens)
+            return self.send_completion(message, n_tokens, stop_sequences)
         elif self.model_type == self.ModelType.chat:
-            return self.send_chat_message(message)
+            return self.send_chat_message(message, n_tokens, stop_sequences)
         else:
             raise Exception("Unknown OpenAI model type")
 
-    def send_completion(self, message, n_tokens = 128):
+    def send_completion(self, message, n_tokens = 128, stop_sequences = []):
         if self.keep_context:
             # Add message to context
             self.context += message
@@ -83,6 +82,9 @@ class OpenAIChatbot(Chatbot):
         # print("=== OpenAI context ===")
         # print(self.context)
         # print("--- END OpenAI message ---")
+
+        # Filter out invalid stop sequences
+        stop_sequences = self.filter_valid_openai_stops(stop_sequences)
 
         # Send message to OpenAI
         response_obj = openai.Completion.create(
@@ -124,7 +126,7 @@ class OpenAIChatbot(Chatbot):
 
         return response_message
 
-    def send_chat_message(self, message, n_tokens = 128):
+    def send_chat_message(self, message, n_tokens = 128, stop_sequences = []):
         raise Exception("Chat model not implemented yet")
 
         self.message_history.append({"role": "user", "content": message})
@@ -165,11 +167,33 @@ class OpenAIChatbot(Chatbot):
     #     # Return response
     #     return response_message
 
+    #@REVISIT architecture; maybe place in base class if it's generic enough
+    def filter_valid_openai_stops(self, stop_sequences: list):
+        valid_stops = []
+        max_openai_stops = 4
+
+        # Check stop sequences
+        for stop_sequence in stop_sequences:
+            # If stop_sequence is string
+            if isinstance(stop_sequence, str):
+                # Add to valid_stops
+                valid_stops.append(stop_sequence)
+
+                # If valid_stops reaches max_openai_stops, break
+                if len(valid_stops) >= max_openai_stops:
+                    break
+
+            else:
+                # Ignore non-string stop sequence #@REVISIT
+                print(f"WARNING: ignoring non-string stop: {stop_sequence}")
+
+        return valid_stops
+
     def log_usage(self, response_obj):
         filename = f"{self.logdir}/ChatGPT/request-usage.txt"
         os.makedirs(os.path.dirname(filename), exist_ok=True)
 
-        with open(filename, 'w+') as file:
+        with open(filename, 'w+', encoding="utf-8") as file:
             if file.read() == '':
                 #@ is dict() necessary?
                 total_usage = Counter(response_obj['usage'])

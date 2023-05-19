@@ -2,6 +2,7 @@ import sys
 import re
 import appdirs
 import keyring
+from typing import Optional
 
 class Chatbot:
     """
@@ -15,8 +16,12 @@ class Chatbot:
     name: str
 
     saved_contexts: list = []
-    bos_token: int
-    eos_token: int
+
+    bos_token: Optional[int] = None
+    eos_token: Optional[int] = None
+
+    #@REVISIT not always in use
+    token_occurrence_count: dict = {}
 
     is_remote: bool = False
     keep_context: bool = False
@@ -70,6 +75,12 @@ class Chatbot:
     def add_tokens_to_context(self, tokens):
         raise NotImplementedError
 
+    def add_string_to_context(self, string):
+        inputs = self.tokenize(string)
+
+        # Add tokens to context
+        self.add_tokens_to_context(inputs)
+
     def get_context(self):
         raise NotImplementedError
 
@@ -89,28 +100,34 @@ class Chatbot:
                temp = 0.8,
                top_k = 30,
                top_p = 0.95,
-               repeat_penalty = 1.3):
+               repeat_penalty = 1.1,
+               presence_penalty = 0.0):
+        """
+        Sample from current context and return a token.
+        """
+
         raise NotImplementedError
 
     def send_message(self,
                      message,
                      stop_sequences = [],
-                     stop_regex = None,
                      n_tokens = 128,
                      ):
-        # Tokenize message
-        if message == "":
-            message = " " #@SCAFFOLDING
+        """
+        Send a message to the chatbot and return the response.
+        """
 
-        inputs = self.tokenize(message)
+        # If message is not empty
+        if message != "":
+            # Add message to context
+            self.add_string_to_context(message)
 
-        # Add tokens to context
-        self.add_tokens_to_context(inputs)
-
-        if __debug__:
-            print(message, flush=True, end="")
+            if __debug__:
+                print(message, flush=True, end="")
 
         # Save context if necessary
+        #@REVISIT I wonder if this should be moved out of this and implemented
+        #@ in bot-aukerman or whatever library the user actually needs this for
         if not self.keep_response_in_context:
             self.save_context()
 
@@ -130,9 +147,10 @@ class Chatbot:
 
         return response_text
 
-        # raise NotImplementedError
-        # response_message = self.api.send_request(message)
-        # return response_message
+    def request_string(self, n_tokens = 128, stop_sequences = []):
+        response_tokens = self.request_tokens(n_tokens, stop_sequences)
+        response_string = self.detokenize(response_tokens)
+        return response_string
 
     def request_tokens(self, n_tokens = 128, stop_sequences = []):
         # Generate one token at a time
@@ -142,6 +160,7 @@ class Chatbot:
         # Parse stop_sequences into a dictionary of filter types
         stop_filters = self.parse_stop_sequences(stop_sequences)
 
+        # Generate tokens
         for i in range(n_tokens):
             next_token = self.sample(temp=0.8,
                                      top_k=30,
@@ -183,6 +202,35 @@ class Chatbot:
             sys.stdout.flush()
 
         return response_tokens
+
+    def increase_occurrence_count(self, token):
+        if token in self.token_occurrence_count:
+            self.token_occurrence_count[token] += 1
+        else:
+            self.token_occurrence_count[token] = 1
+
+    def apply_penalties(self,
+                        logits,
+                        repeat_penalty = 1.0,
+                        presence_penalty = 0.0):
+        """
+        Apply penalties to the logits.
+        """
+
+        #@TODO probably do something more like openai's range of -2 to 2
+
+        if repeat_penalty > 1.0 or presence_penalty > 1.0:
+            for token, count in self.token_occurrence_count.items():
+                # Apply presence penalty
+                if presence_penalty != 0.0:
+                    logits[token] -= presence_penalty
+
+                # Apply repetition penalty
+                if repeat_penalty > 1.0: #@REVISIT allow less than one?
+                    logits[token] /= repeat_penalty * count
+
+        return logits
+
 
     def parse_stop_sequences(self, stop_sequences):
         """
@@ -227,5 +275,7 @@ class Chatbot:
             filename = self.name + "-log.txt"
 
         # Log message to file
-        with open(f"{self.logdir}/{filename}", 'a+') as logfile:
+        with open(f"{self.logdir}/{filename}",
+                  mode = 'a+',
+                  encoding = "utf-8") as logfile:
             logfile.write(message + "\n")

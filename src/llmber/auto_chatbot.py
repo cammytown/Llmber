@@ -64,6 +64,18 @@ class AutoChatbot(Chatbot):
         self.keep_context = self.chatbot.keep_context
         self.keep_response_in_context = self.chatbot.keep_response_in_context
 
+    def tokenize(self, string):
+        return self.chatbot.tokenize(string)
+
+    def detokenize(self, tokens):
+        return self.chatbot.detokenize(tokens)
+
+    def add_tokens_to_context(self, tokens):
+        return self.chatbot.add_tokens_to_context(tokens)
+
+    def add_string_to_context(self, string):
+        return self.chatbot.add_string_to_context(string)
+
     def get_context(self):
         return self.chatbot.get_context()
 
@@ -76,10 +88,21 @@ class AutoChatbot(Chatbot):
     def restore_context(self):
         return self.chatbot.restore_context()
 
+    def sample(self,
+               temp = 0.8,
+               top_k = 30,
+               top_p = 0.95,
+               repeat_penalty = 1.1,
+               presence_penalty = 0.0):
+        return self.chatbot.sample(temp,
+                                   top_k,
+                                   top_p,
+                                   repeat_penalty,
+                                   presence_penalty)
+
     def send_message(self,
                      message,
                      stop_sequences = [],
-                     stop_regex = None,
                      n_tokens = 128):
         """
         Send a message to the chatbot and return the response. Wrapper around 
@@ -88,6 +111,11 @@ class AutoChatbot(Chatbot):
 
         return self.chatbot.send_message(message,
                                          stop_sequences,
-                                         stop_regex,
                                          n_tokens)
+
+    def request_string(self, n_tokens=128, stop_sequences=[]):
+        return self.chatbot.request_string(n_tokens, stop_sequences)
+
+    def request_tokens(self, n_tokens=128, stop_sequences=[]):
+        return self.chatbot.request_tokens(n_tokens, stop_sequences)
 

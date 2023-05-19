@@ -52,17 +52,6 @@ class LlamaCPPChatbot(Chatbot):
     def detokenize(self, tokens):
         return self.model.detokenize(tokens).decode("utf-8")
 
-    def send_message(self,
-                     message: str,
-                     stop_sequences = [],
-                     stop_regex = None,
-                     n_tokens = 128):
-
-        return super().send_message(message,
-                                    stop_sequences = stop_sequences,
-                                    stop_regex = stop_regex,
-                                    n_tokens = n_tokens)
-
     def get_context(self):
         return self.model.save_state()
 
@@ -75,6 +64,15 @@ class LlamaCPPChatbot(Chatbot):
         """
         self.model.eval(tokens)
 
+    def send_message(self,
+                     message: str,
+                     stop_sequences = [],
+                     n_tokens = 128):
+
+        return super().send_message(message,
+                                    stop_sequences = stop_sequences,
+                                    n_tokens = n_tokens)
+
     def request_tokens(self, n_tokens = 128, stop_sequences = []):
         return super().request_tokens(n_tokens = n_tokens,
                                       stop_sequences = stop_sequences)
@@ -83,8 +81,10 @@ class LlamaCPPChatbot(Chatbot):
                temp = 0.8,
                top_k = 30,
                top_p = 0.95,
-               repeat_penalty = 1.3):
+               repeat_penalty = 1.1,
+               presence_penalty = 0.0):
         return self.model.sample(temp = temp,
                                  top_k = top_k,
                                  top_p = top_p,
-                                 repeat_penalty = repeat_penalty)
+                                 repeat_penalty = repeat_penalty,
+                                 presence_penalty = presence_penalty)

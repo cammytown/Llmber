@@ -40,12 +40,14 @@ from rwkv.utils import PIPELINE, PIPELINE_ARGS
 from .chatbot import Chatbot
 
 class RWKVChatbot(Chatbot):
+    valid_options = [#"model", #@TODO
+                     "keep_response_in_context"]
+
     model: RWKV
     pipeline: PIPELINE
     args: PIPELINE_ARGS #@REVISIT naming
 
-    token_occurrence_count: dict = {} #@REVISIT should this be class level or method?
-    logits: list
+    logits: list = []
     state = None
 
     # all_tokens: list = [] #@REVISIT naming
@@ -74,6 +76,7 @@ class RWKVChatbot(Chatbot):
         # self.model = RWKV(model=model_path, strategy='cuda fp16i8 -> cpu fp32 *3')
         self.pipeline = PIPELINE(self.model, tokenizer_path)
 
+        #@TODO revisit all these args; are they even in use?
         self.args = PIPELINE_ARGS(
                 # variability of the generated tokens
                 temperature = 1.5,
@@ -95,6 +98,7 @@ class RWKVChatbot(Chatbot):
                 token_ban = [0],
 
                 # stop generation on these tokens
+                #@TODO not using?
                 token_stop = [],
 
                 # split input into chunks to save VRAM
@@ -104,109 +108,143 @@ class RWKVChatbot(Chatbot):
         if not self.model: #@REVISIT does this do anything?
             raise Exception("Model failed to initialize")
 
-    def add_tokens_to_state(self, tokens):
-        # Decode tokens and add to context
-        #@REVISIT optimization possibilities
-        if __debug__:
-            token_meaning = self.pipeline.decode(tokens)
-            # self.context += token_meaning
-            print(token_meaning, end='', flush=True) #@SCAFFOLDING
+    def tokenize(self, message):
+        return self.pipeline.encode(message)
 
-        # Add tokens to state
+    def detokenize(self, tokens):
+        return self.pipeline.decode(tokens)
+
+    def add_tokens_to_context(self, tokens):
+        # Decode tokens and add to context
         while len(tokens) > 0:
-            self.logits, self.state = self.pipeline.model.forward(tokens[:self.args.chunk_len], self.state)
+            self.logits, self.state = self.pipeline.model.forward(tokens[:self.args.chunk_len],
+                                                                  self.state)
             tokens = tokens[self.args.chunk_len:]
 
-    def add_string_to_state(self, string):
-        tokens = self.pipeline.encode(string)
-        self.add_tokens_to_state(tokens)
+    # def add_string_to_context(self, string):
+    #     tokens = self.tokenize(string)
+    #     self.add_tokens_to_context(tokens)
 
-    def send_message(self, message, stop_sequences = [], stop_regex = None):
-        # Encode message
-        tokens = self.pipeline.encode(message)
+    def get_context(self):
+        return (self.logits, self.state)
 
-        # Add tokens to state
-        if __debug__:
-            print("Updating model state with tokens: {}".format(tokens))
-        self.add_tokens_to_state(tokens)
+    def set_context(self, context):
+        #@DOUBLE-CHECK this is right, right? and we need both?
+        self.logits, self.state = context
 
-        # Generate response
-        response_message = self.request_tokens(n_tokens=256,
-                                               stop_sequences=stop_sequences,
-                                               stop_regex=stop_regex)
+    def sample(self,
+               temp = 0.8,
+               top_k = 30,
+               top_p = 0.95,
+               repeat_penalty = 1.1,
+               presence_penalty = 0.0):
 
-        return response_message
+        # Apply repetition/presence penalties
+        self.apply_penalties(self.logits, repeat_penalty, presence_penalty)
 
-    #@REVISIT n_tokens and n_predict seem at odds; will be confusing
-    #@REVISIT currently returns string, not list of tokens; confusing?
-    def request_tokens(self,
-                       n_tokens = 256,
-                       stop_sequences = [],
-                       stop_regex = None):
+        # Sample from the model
+        token = self.pipeline.sample_logits(self.logits,
+                                            temperature=temp,
+                                            top_p=top_p,
+                                            top_k=top_k)
 
-        token_string = ""
+        # Increment token occurrence count
+        self.increase_occurrence_count(token)
 
-        for i in range(n_tokens):
-            for n in self.args.token_ban:
-                self.logits[n] = -float('inf')
-            for n in self.token_occurrence_count:
-                self.logits[n] -= (self.args.alpha_presence + self.token_occurrence_count[n] * self.args.alpha_frequency)
+        return token
 
-            # sampler
-            token = self.pipeline.sample_logits(self.logits,
-                                       temperature=self.args.temperature,
-                                       top_p=self.args.top_p,
-                                       top_k=self.args.top_k)
+    # def check_for_stop(self, token_string, stop_sequences, stop_regex):
+    #     # Check for occurrence of a stop sequence:
+    #     for stop_sequence in stop_sequences:
+    #         #@REVISIT I check the whole string because I worry that the
+    #         #stop sequence might occur in the middle of a token
+    #         if stop_sequence in token_string:
+    #             if __debug__:
+    #                 print(f"Found stop sequence {stop_sequence} in {token_string}")
+    #             return True
 
-            # If token is in token_stop, stop generation
-            if token in self.args.token_stop:
-                break
+    #     # Check for occurrence of a stop regex:
+    #     #@REVISIT doing this for every token is questionable
+    #     if stop_regex:
+    #         if re.search(stop_regex, token_string):
+    #             if __debug__:
+    #                 print(f"Found stop regex {stop_regex} in {token_string}")
+    #             return True
 
-            # Increment self.token_occurrence_count of token
-            if token not in self.token_occurrence_count:
-                self.token_occurrence_count[token] = 1
-            else:
-                self.token_occurrence_count[token] += 1
+    # def send_message(self,
+    #                  message,
+    #                  stop_sequences = [],
+    #                  stop_regex = None,
+    #                  n_tokens = 128):
 
-            self.add_tokens_to_state([token])
+    #     # Encode message
+    #     tokens = self.pipeline.encode(message)
 
-            # Decode token and add to token_string
-            token_string += self.pipeline.decode([token])
+    #     # Add tokens to state
+    #     if __debug__:
+    #         print("Updating model state with tokens: {}".format(tokens))
 
-            # Check for occurrence of a stop sequence:
-            if self.check_for_stop(token_string, stop_sequences, stop_regex):
-                break
+    #     self.add_tokens_to_context(tokens)
 
-            # tmp = self.pipeline.decode(self.all_tokens[out_last:])
-            # if '\ufffd' not in tmp: # is valid utf-8 string?
-            #     # if callback:
-            #     #     callback(tmp)
-            #     print(tmp, end='', flush=True)
-            #     out_str += tmp
-            #     out_last = len(self.all_tokens)
-            #     # out_last = i + 1
+    #     # Generate response
+    #     response_message = self.request_tokens(n_tokens=n_tokens,
+    #                                            stop_sequences=stop_sequences,
+    #                                            stop_regex=stop_regex)
 
-        if __debug__:
-            # Flush stdout
-            sys.stdout.flush()
-            # print(f"Generated {len(token_string)} tokens")
+    #     return response_message
 
-        return token_string
+    # @REVISIT n_tokens and n_predict seem at odds; will be confusing
+    # @REVISIT currently returns string, not list of tokens; confusing?
+    # def request_tokens(self,
+    #                    n_tokens = 128,
+    #                    stop_sequences = [],
+    #                    stop_regex = None):
 
-    def check_for_stop(self, token_string, stop_sequences, stop_regex):
-        # Check for occurrence of a stop sequence:
-        for stop_sequence in stop_sequences:
-            #@REVISIT I check the whole string because I worry that the
-            #stop sequence might occur in the middle of a token
-            if stop_sequence in token_string:
-                if __debug__:
-                    print(f"Found stop sequence {stop_sequence} in {token_string}")
-                return True
+    #     token_string = ""
 
-        # Check for occurrence of a stop regex:
-        #@REVISIT doing this for every token is questionable
-        if stop_regex:
-            if re.search(stop_regex, token_string):
-                if __debug__:
-                    print(f"Found stop regex {stop_regex} in {token_string}")
-                return True
+    #     for i in range(n_tokens):
+    #         for n in self.args.token_ban:
+    #             self.logits[n] = -float('inf')
+    #         for n in self.token_occurrence_count:
+    #             self.logits[n] -= (self.args.alpha_presence + self.token_occurrence_count[n] * self.args.alpha_frequency)
+
+    #         # sampler
+    #         token = self.sample(temp=self.args.temperature,
+    #                             top_p=self.args.top_p,
+    #                             top_k=self.args.top_k)
+
+    #         # If token is in token_stop, stop generation
+    #         if token in self.args.token_stop:
+    #             break
+
+    #         # Increment self.token_occurrence_count of token
+    #         if token not in self.token_occurrence_count:
+    #             self.token_occurrence_count[token] = 1
+    #         else:
+    #             self.token_occurrence_count[token] += 1
+
+    #         # Add token to context
+    #         self.add_tokens_to_context([token])
+
+    #         # Decode token and add to token_string
+    #         token_string += self.pipeline.decode([token])
+
+    #         # Check for occurrence of a stop sequence:
+    #         if self.check_for_stop(token_string, stop_sequences, stop_regex):
+    #             break
+
+    #         # tmp = self.pipeline.decode(self.all_tokens[out_last:])
+    #         # if '\ufffd' not in tmp: # is valid utf-8 string?
+    #         #     # if callback:
+    #         #     #     callback(tmp)
+    #         #     print(tmp, end='', flush=True)
+    #         #     out_str += tmp
+    #         #     out_last = len(self.all_tokens)
+    #         #     # out_last = i + 1
+
+    #     if __debug__:
+    #         # Flush stdout
+    #         sys.stdout.flush()
+    #         # print(f"Generated {len(token_string)} tokens")
+
+    #     return token_string

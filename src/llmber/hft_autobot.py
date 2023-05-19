@@ -27,7 +27,6 @@ class HFTAutoBot(Chatbot):
 
         if "model" not in model_config:
             raise ValueError("model_config must contain a 'model' key")
-
         model_name = model_config["model"].lower()
 
         # cache_dir = "/run/media/cammy/PROJECTS2/huggingface_cache" #@SCAFFOLDING
@@ -35,7 +34,6 @@ class HFTAutoBot(Chatbot):
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name,
                                                        cache_dir=cache_dir)
-
         self.model = AutoModelForCausalLM.from_pretrained(model_name,
                                                           cache_dir=cache_dir)
 
@@ -85,6 +83,8 @@ class HFTAutoBot(Chatbot):
             #@REVISIT I don't really know when .to() is necessary
             tokens = torch.tensor([tokens]).to(self.model.device)
 
+        #@TODO pass in chunks
+
         # Generate new logits
         outputs = self.model(tokens,
                              past_key_values=self.past_key_values)
@@ -96,11 +96,9 @@ class HFTAutoBot(Chatbot):
     def send_message(self,
                      message,
                      stop_sequences = [],
-                     stop_regex = None,
                      n_tokens = 128):
         return super().send_message(message,
                              stop_sequences = stop_sequences,
-                             stop_regex = stop_regex,
                              n_tokens = n_tokens)
 
     def request_tokens(self, n_tokens = 128, stop_sequences = []):
@@ -111,23 +109,56 @@ class HFTAutoBot(Chatbot):
                temp = 1.0,
                top_k = 0,
                top_p = 0.0,
-               repeat_penalty = 0) -> int:
+               repeat_penalty = 1.1,
+               presence_penalty = 0.0) -> int:
         """
         Sample a token from the current logits.
         """
 
+        assert self.logits is not None, "logits somehow unset before sampling"
+
         # Apply temperature
         logits = self.logits / temp
 
-        #@TODO-4 implement repetition/etc. penalty
+        #@TODO
+        # for banned_token in self.args.token_ban:
+        #     self.logits[banned_token] = -float('inf')
+
+        # Apply repetition penalty
+        #@REVISIT passing in logits[0, -1]; is it working?
+        self.apply_penalties(logits[0, -1], repeat_penalty, presence_penalty)
 
         # Apply top-k
+        if top_k > 0:
+            self.apply_top_k(logits, top_k)
+
+        # Apply top-p
+        if top_p > 0.0:
+            self.apply_top_p(logits, top_p)
+
+        # Convert logits to probabilities
+        probs = torch.softmax(logits, dim=-1)
+
+        # Squeeze (remove) the batch dimension
+        probs = probs.squeeze(0)
+
+        # Pick the next token
+        token_tensor = torch.multinomial(probs, num_samples=1).long()
+        token = token_tensor[-1].item()
+
+        # Increase token occurrence count
+        self.increase_occurrence_count(token)
+
+        # Return the sampled token
+        return token
+
+    def apply_top_k(self, logits, top_k = 0.0):
         if top_k > 0:
             top_k = min(top_k, logits.shape[-1])
             indices_to_remove = (logits < torch.topk(logits, top_k)[0][..., -1, None])
             logits[indices_to_remove] = -float("Inf")
 
-        # Apply top-p
+    def apply_top_p(self, logits, top_p = 0.0):
         if top_p > 0.0:
             sorted_logits, sorted_indices = torch.sort(logits,
                                                        descending=True,
@@ -149,19 +180,6 @@ class HFTAutoBot(Chatbot):
 
             # Set the logits to -inf
             logits[mask] = -float("Inf")
-
-        # Convert logits to probabilities
-        probs = torch.softmax(logits, dim=-1)
-
-        # Squeeze (remove) the batch dimension
-        probs = probs.squeeze(0)
-
-        # Pick the next token
-        token_tensor = torch.multinomial(probs, num_samples=1).long()
-        token = token_tensor[-1].item()
-
-        # Return the sampled token
-        return token
 
     # #@REVISIT when they patch generate so it can return past_key_values
     # def request_tokens_generate(self, tokens, n_tokens = 128):
