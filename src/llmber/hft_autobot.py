@@ -1,6 +1,6 @@
 import sys
 import torch
-from typing import List
+from typing import List, Tuple
 from typing import Optional
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -11,8 +11,8 @@ class HFTAutoBot(Chatbot):
     valid_options = ["model",
                      "keep_response_in_context"]
 
-    logits: Optional[torch.Tensor] = None
-    past_key_values: Optional[torch.Tensor] = None
+    logits: Optional[torch.LongTensor] = None
+    past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None
     saved_contexts: List[tuple] = []
 
     def __init__(self,
@@ -29,7 +29,6 @@ class HFTAutoBot(Chatbot):
             raise ValueError("model_config must contain a 'model' key")
         model_name = model_config["model"].lower()
 
-        # cache_dir = "/run/media/cammy/PROJECTS2/huggingface_cache" #@SCAFFOLDING
         cache_dir = None
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name,
@@ -39,18 +38,15 @@ class HFTAutoBot(Chatbot):
 
         self.bos_token = self.tokenizer.bos_token_id
         self.eos_token = self.tokenizer.eos_token_id
+        self.max_context_length = self.tokenizer.model_max_length
 
-        # Set the model to half-precision floating point and move it to the GPU
-        #@REVISIT make configurable?
-        self.model.half()
-        
-        # Check if GPU is available
+        # If GPU is available
         if torch.cuda.is_available():
             # Move the model to the GPU
             self.model.cuda()
-        # else:
-        #     # Move the model to the CPU
-        #     self.model.cpu()
+
+            # Set the model to half-precision floating point
+            self.model.half()
 
         # Set the model to evaluation mode (disables dropout)
         self.model.eval()
@@ -80,8 +76,14 @@ class HFTAutoBot(Chatbot):
         if isinstance(tokens, list): #@SCAFFOLDING
             # Turn next_token into something that can be fed into the model
             #@REVISIT I don't know why this is necessary
-            #@REVISIT I don't really know when .to() is necessary
+            #@REVISIT I don't really know when .to() is necessary/valuable
             tokens = torch.tensor([tokens]).to(self.model.device)
+
+        if self.past_key_values is not None:
+            # If context has max length
+            if self.max_context_length is not None:
+                    self.truncate_past_key_values(tokens.size(1))
+
 
         #@TODO pass in chunks
 
@@ -92,6 +94,32 @@ class HFTAutoBot(Chatbot):
         # Update the logits and past key values
         self.logits = outputs.logits
         self.past_key_values = outputs.past_key_values
+
+    def truncate_past_key_values(self, buffer_size: int):
+        """
+        Truncate the past_key_values max length plus buffer size.
+        """
+
+        # Calculate sum of current context size and new tokens size
+        sum_size = self.past_key_values[0][0].size(2) + buffer_size
+
+        # If new context size will exceed max length
+        if sum_size > self.max_context_length:
+            # Calculate overage
+            overage = sum_size - self.max_context_length
+
+            # Remove overage from past_key_values
+            new_past_key_values = []
+
+            for layer in self.past_key_values:
+                new_layer = []
+                for tensor in layer:
+                    tensor = tensor[:, :, overage:, :]
+                    new_layer.append(tensor)
+
+                new_past_key_values.append(new_layer)
+
+            self.past_key_values = new_past_key_values
 
     def send_message(self,
                      message,

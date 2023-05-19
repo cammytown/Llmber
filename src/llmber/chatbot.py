@@ -19,6 +19,7 @@ class Chatbot:
 
     bos_token: Optional[int] = None
     eos_token: Optional[int] = None
+    max_context_length: Optional[int] = None
 
     #@REVISIT not always in use
     token_occurrence_count: dict = {}
@@ -76,6 +77,9 @@ class Chatbot:
         raise NotImplementedError
 
     def add_string_to_context(self, string):
+        if string == "":
+            return
+
         inputs = self.tokenize(string)
 
         # Add tokens to context
