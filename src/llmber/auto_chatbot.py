@@ -9,7 +9,9 @@ class AutoChatbot(Chatbot):
     valid_options = ["engine",
                      "model",
                      "keep_context",
-                     "keep_response_in_context"]
+                     "keep_response_in_context",
+                     "use_cuda",
+                     "max_context_length"]
     chatbot: Chatbot
 
     def __init__(self,
@@ -60,7 +62,7 @@ class AutoChatbot(Chatbot):
         self.chatbot = bot_class(model_config=model_config, logdir=logdir)
 
         #@REVISIT:
-        self.model = self.chatbot.model
+        # self.model = self.chatbot.model
         self.keep_context = self.chatbot.keep_context
         self.keep_response_in_context = self.chatbot.keep_response_in_context
 

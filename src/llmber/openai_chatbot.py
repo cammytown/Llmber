@@ -4,18 +4,18 @@ from collections import Counter
 import openai
 import json
 
-from .chatbot import Chatbot
+from .remote_chatbot import RemoteChatbot
 
-class OpenAIChatbot(Chatbot):
+class OpenAIChatbot(RemoteChatbot):
     valid_options = ["model",
                      "keep_context",
                      "keep_response_in_context"]
 
     api = openai
 
-    # Completion uses context, Chat uses message_history #@REVISIT architecture
-    context = ""
-    message_history = []
+    # # Completion uses context, Chat uses message_history #@REVISIT architecture
+    # context = ""
+    # message_history = []
 
     ModelType = Enum('Mode', ['completion', 'chat'])
     model_type: ModelType
@@ -29,7 +29,6 @@ class OpenAIChatbot(Chatbot):
                          model_config = model_config,
                          logdir = logdir)
 
-        self.is_remote = True
         self.keep_context = False
 
         openai_key = self.retrieve_key('openai')
@@ -37,8 +36,6 @@ class OpenAIChatbot(Chatbot):
             self.api.api_key = openai_key
         else:
             raise Exception("Couldn't retrieve OpenAI key")
-
-        self.model_config = model_config
 
         #@TODO we should probably first check a list of valid models and then
         #@ warn user if they're using an unknown model before falling back on this
@@ -56,36 +53,7 @@ class OpenAIChatbot(Chatbot):
         # self.openai_bot.set_presence_penalty(0)
         # self.openai_bot.set_stop(['\n', ' Human:', ' AI:'])
 
-    def send_message(self,
-                     message,
-                     stop_sequences = [],
-                     n_tokens = 128):
-
-        # if __debug__:
-        #     print("Sending message to OpenAI: {}".format(message))
-
-        if self.model_type == self.ModelType.completion:
-            return self.send_completion(message, n_tokens, stop_sequences)
-        elif self.model_type == self.ModelType.chat:
-            return self.send_chat_message(message, n_tokens, stop_sequences)
-        else:
-            raise Exception("Unknown OpenAI model type")
-
-    def send_completion(self, message, n_tokens = 128, stop_sequences = []):
-        if self.keep_context:
-            # Add message to context
-            self.context += message
-        else:
-            # Replace context with message
-            self.context = message
-
-        # print("=== OpenAI context ===")
-        # print(self.context)
-        # print("--- END OpenAI message ---")
-
-        # Filter out invalid stop sequences
-        stop_sequences = self.filter_valid_openai_stops(stop_sequences)
-
+    def request_string(self, n_tokens = 128, stop_sequences = []):
         # Send message to OpenAI
         response_obj = openai.Completion.create(
             model = self.model_config['model'],
@@ -123,6 +91,41 @@ class OpenAIChatbot(Chatbot):
 
         # Log usage
         self.log_usage(response_obj)
+
+        # Return response
+        return response_message
+
+    def send_message(self,
+                     message,
+                     stop_sequences = [],
+                     n_tokens = 128):
+
+        # if __debug__:
+        #     print("Sending message to OpenAI: {}".format(message))
+
+        if self.model_type == self.ModelType.completion:
+            return self.send_completion(message, n_tokens, stop_sequences)
+        elif self.model_type == self.ModelType.chat:
+            return self.send_chat_message(message, n_tokens, stop_sequences)
+        else:
+            raise Exception("Unknown OpenAI model type")
+
+    def send_completion(self, message, n_tokens = 128, stop_sequences = []):
+        if self.keep_context:
+            # Add message to context
+            self.context += message
+        else:
+            # Replace context with message
+            self.context = message
+
+        # print("=== OpenAI context ===")
+        # print(self.context)
+        # print("--- END OpenAI message ---")
+
+        # Filter out invalid stop sequences
+        stop_sequences = self.filter_valid_openai_stops(stop_sequences)
+
+        response_message = self.request_string(n_tokens, stop_sequences)
 
         return response_message
 

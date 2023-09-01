@@ -24,10 +24,10 @@ class Chatbot:
     #@REVISIT not always in use
     token_occurrence_count: dict = {}
 
+    context_string: str = "" #@REVISIT not always in use
     is_remote: bool = False
     keep_context: bool = False
     keep_response_in_context: bool = True
-    # context: str = ""
 
     logdir: str = ""
 
@@ -80,21 +80,55 @@ class Chatbot:
         if string == "":
             return
 
-        inputs = self.tokenize(string)
+        # Tokenize the string
+        tokens = self.tokenize(string)
 
         # Add tokens to context
-        self.add_tokens_to_context(inputs)
+        self.add_tokens_to_context(tokens)
 
+        # Add string to context string
+        self.context_string += string
+
+    #@REVISIT rename to get_state ?
     def get_context(self):
+        """
+        Get the current context of the chatbot.
+
+        This is the state of the chatbot. When set_context is used
+        with the value that get_context returns, the chatbot should be in the
+        same state as it was when get_context was called.
+
+        The context can be, for example, the logits and past_key_values of a
+        HuggingFace Transformers model. Otherwise, it could simply be a
+        string containing the chatbot's current context as in the case of
+        remote chatbots like OpenAI.
+        """
+
         raise NotImplementedError
 
     def set_context(self, context):
+        """
+        Set the current context of the chatbot.
+
+        This is the state of the chatbot. When set_context is used
+        with the value that get_context returns, the chatbot should be in the
+        same state as it was when get_context was called.
+        """
+
         raise NotImplementedError
 
     def save_context(self):
+        """
+        Save the current context of the chatbot.
+        """
+
         self.saved_contexts.append(self.get_context())
 
     def restore_context(self):
+        """
+        Restore the most recently saved context of the chatbot.
+        """
+
         if len(self.saved_contexts) > 0:
             self.set_context(self.saved_contexts.pop())
         else:
@@ -154,6 +188,7 @@ class Chatbot:
     def request_string(self, n_tokens = 128, stop_sequences = []):
         response_tokens = self.request_tokens(n_tokens, stop_sequences)
         response_string = self.detokenize(response_tokens)
+
         return response_string
 
     def request_tokens(self, n_tokens = 128, stop_sequences = []):

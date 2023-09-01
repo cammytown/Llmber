@@ -9,7 +9,9 @@ from .chatbot import Chatbot
 
 class HFTAutoBot(Chatbot):
     valid_options = ["model",
-                     "keep_response_in_context"]
+                     "keep_response_in_context",
+                     "use_cuda",
+                     "max_context_length"]
 
     logits: Optional[torch.LongTensor] = None
     past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None
@@ -38,10 +40,23 @@ class HFTAutoBot(Chatbot):
 
         self.bos_token = self.tokenizer.bos_token_id
         self.eos_token = self.tokenizer.eos_token_id
-        self.max_context_length = self.tokenizer.model_max_length
+
+        if "max_context_length" in model_config:
+            if model_config["max_context_length"] > self.tokenizer.model_max_length:
+                raise ValueError("max_context_length exceeds model's max length")
+
+            self.max_context_length = model_config["max_context_length"]
+        elif self.tokenizer.model_max_length is not None:
+            #@TODO attempt to analyze hardware to determine max length
+            self.max_context_length = self.tokenizer.model_max_length
+        else:
+            self.max_context_length = 512 #@REVISIT
 
         # If GPU is available
-        if torch.cuda.is_available():
+        if torch.cuda.is_available() \
+                and self.model_config.get("use_cuda", False):
+            #@TODO what if GPU is insufficient?
+
             # Move the model to the GPU
             self.model.cuda()
 
@@ -84,6 +99,10 @@ class HFTAutoBot(Chatbot):
             if self.max_context_length is not None:
                     self.truncate_past_key_values(tokens.size(1))
 
+        # print("token size", tokens.size(1))
+        if self.past_key_values is not None:
+            print("past_key_values size", self.past_key_values[0][0].size(2))
+
 
         #@TODO pass in chunks
 
@@ -108,18 +127,26 @@ class HFTAutoBot(Chatbot):
             # Calculate overage
             overage = sum_size - self.max_context_length
 
+            # Reset past_key_values
+            self.past_key_values = None
+
+            # Re-add as much of the context as possible
+            #@TODO hacky; attempting to truncate past_key_values manually
+            #@ below led to incoherency; maybe I did it wrong
+            self.add_string_to_context(self.context_string[-overage:])
+
             # Remove overage from past_key_values
-            new_past_key_values = []
+            # new_past_key_values = []
 
-            for layer in self.past_key_values:
-                new_layer = []
-                for tensor in layer:
-                    tensor = tensor[:, :, overage:, :]
-                    new_layer.append(tensor)
+            # for layer in self.past_key_values:
+            #     new_layer = []
+            #     for tensor in layer:
+            #         tensor = tensor[:, :, overage:, :]
+            #         new_layer.append(tensor)
 
-                new_past_key_values.append(new_layer)
+            #     new_past_key_values.append(new_layer)
 
-            self.past_key_values = new_past_key_values
+            # self.past_key_values = new_past_key_values
 
     def send_message(self,
                      message,
@@ -130,6 +157,8 @@ class HFTAutoBot(Chatbot):
                              n_tokens = n_tokens)
 
     def request_tokens(self, n_tokens = 128, stop_sequences = []):
+        self.truncate_past_key_values(n_tokens)
+
         return super().request_tokens(n_tokens = n_tokens,
                                       stop_sequences = stop_sequences)
 
