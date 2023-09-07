@@ -134,6 +134,13 @@ class Chatbot:
         else:
             print(f"WARN: No saved contexts to restore", file=sys.stderr)
 
+    def clear_context(self):
+        """
+        Clear the current context of the chatbot.
+        """
+
+        raise NotImplementedError
+
     def sample(self,
                temp = 0.8,
                top_k = 30,

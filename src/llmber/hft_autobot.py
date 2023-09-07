@@ -82,6 +82,10 @@ class HFTAutoBot(Chatbot):
     def set_context(self, context):
         self.logits, self.past_key_values = context
 
+    def clear_context(self):
+        self.logits = None
+        self.past_key_values = None
+
     def add_tokens_to_context(self, tokens):
         """
         Add tokens to the model's current context.
@@ -100,9 +104,8 @@ class HFTAutoBot(Chatbot):
                     self.truncate_past_key_values(tokens.size(1))
 
         # print("token size", tokens.size(1))
-        if self.past_key_values is not None:
-            print("past_key_values size", self.past_key_values[0][0].size(2))
-
+        # if self.past_key_values is not None:
+        #     print("past_key_values size", self.past_key_values[0][0].size(2))
 
         #@TODO pass in chunks
 

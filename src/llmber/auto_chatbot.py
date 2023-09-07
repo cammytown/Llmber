@@ -90,6 +90,9 @@ class AutoChatbot(Chatbot):
     def restore_context(self):
         return self.chatbot.restore_context()
 
+    def clear_context(self):
+        return self.chatbot.clear_context()
+
     def sample(self,
                temp = 0.8,
                top_k = 30,
