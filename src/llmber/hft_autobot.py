@@ -93,21 +93,26 @@ class HFTAutoBot(Chatbot):
 
         # If tokens is list
         if isinstance(tokens, list): #@SCAFFOLDING
-            # Turn next_token into something that can be fed into the model
+            # Turn tokens into something that can be fed into the model
             #@REVISIT I don't know why this is necessary
             #@REVISIT I don't really know when .to() is necessary/valuable
             tokens = torch.tensor([tokens]).to(self.model.device)
 
-        if self.past_key_values is not None:
-            # If context has max length
-            if self.max_context_length is not None:
-                    self.truncate_past_key_values(tokens.size(1))
+        # If context has max length
+        if self.max_context_length is not None:
+            # If tokens size exceeds max length
+            if tokens.size(1) > self.max_context_length:
+                # Truncate tokens
+                #@REVISIT have a truncate_tokens() method and combine with
+                #@ truncate_past_key_values()?
+                tokens = tokens[:, -self.max_context_length:]
 
-        # print("token size", tokens.size(1))
-        # if self.past_key_values is not None:
-        #     print("past_key_values size", self.past_key_values[0][0].size(2))
+            # If context is not empty
+            elif self.past_key_values is not None:
+                # Truncate past_key_values
+                self.truncate_past_key_values(tokens.size(1))
 
-        #@TODO pass in chunks
+        #@TODO batch size
 
         # Generate new logits
         outputs = self.model(tokens,
