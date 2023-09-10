@@ -100,9 +100,9 @@ class HFTAutoBot(Chatbot):
 
         # If context has max length
         if self.max_context_length is not None:
-            # If tokens size exceeds max length
+            # If input tokens exceed max context length
             if tokens.size(1) > self.max_context_length:
-                # Truncate tokens
+                # Truncate input tokens
                 #@REVISIT have a truncate_tokens() method and combine with
                 #@ truncate_past_key_values()?
                 tokens = tokens[:, -self.max_context_length:]
@@ -111,8 +111,6 @@ class HFTAutoBot(Chatbot):
             elif self.past_key_values is not None:
                 # Truncate past_key_values
                 self.truncate_past_key_values(tokens.size(1))
-
-        #@TODO batch size
 
         # Generate new logits
         outputs = self.model(tokens,
@@ -165,8 +163,6 @@ class HFTAutoBot(Chatbot):
                              n_tokens = n_tokens)
 
     def request_tokens(self, n_tokens = 128, stop_sequences = []):
-        self.truncate_past_key_values(n_tokens)
-
         return super().request_tokens(n_tokens = n_tokens,
                                       stop_sequences = stop_sequences)
 
