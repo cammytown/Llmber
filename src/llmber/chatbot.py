@@ -1,4 +1,5 @@
 import sys
+import os
 import re
 import appdirs
 import keyring
@@ -52,7 +53,18 @@ class Chatbot:
         self.model_config = model_config
 
     def retrieve_key(self, api_name):
-        key = keyring.get_password('api', api_name)
+        """
+        """
+
+        # If api_env_var is set in model_config
+        #@REVISIT feel like this is ugly architecture
+        if "api_env_var" in self.model_config:
+            # Retrieve key from environment variable
+            key = os.getenv(self.model_config["api_env_var"])
+
+        # Otherwise, retrieve key from keyring
+        else:
+            key = keyring.get_password('api', api_name)
 
         if key:
             return key
@@ -204,6 +216,7 @@ class Chatbot:
         response_text = "" #@REVISIT optimization? only use if regex is needed?
 
         # Parse stop_sequences into a dictionary of filter types
+        #@REVISIT every time we parse?
         stop_filters = self.parse_stop_sequences(stop_sequences)
 
         # Generate tokens
@@ -284,6 +297,7 @@ class Chatbot:
         """
 
         stop_filters = {
+            "strings": [],
             "token_sequences": [],
             "regexes": []
         }
@@ -291,8 +305,22 @@ class Chatbot:
         for stop_sequence in stop_sequences:
             # If stop sequence is a string
             if isinstance(stop_sequence, str):
-                stop_tokens = self.tokenize(stop_sequence)
-                stop_filters["token_sequences"].append(stop_tokens)
+                #@REVISIT this ugly architecture; remote chatbots don't need to
+                #@ tokenize-- but the contents of the variables we're working
+                #@ with feel unclear/unpredictable
+
+                # If remote chatbot
+                if self.is_remote:
+                    # Just add string to token_sequences
+                    stop_filters["token_sequences"].append(stop_sequence)
+
+                # If local chatbot
+                else:
+                    # Tokenize the string
+                    stop_tokens = self.tokenize(stop_sequence)
+
+                    # Add tokens to token_sequences
+                    stop_filters["token_sequences"].append(stop_tokens)
 
             # If stop sequence is a dict
             elif isinstance(stop_sequence, dict):

@@ -8,6 +8,7 @@ from .remote_chatbot import RemoteChatbot
 
 class OpenAIChatbot(RemoteChatbot):
     valid_options = ["model",
+                     "api_env_var",
                      "keep_context",
                      "keep_response_in_context"]
 
@@ -54,6 +55,17 @@ class OpenAIChatbot(RemoteChatbot):
         # self.openai_bot.set_stop(['\n', ' Human:', ' AI:'])
 
     def request_string(self, n_tokens = 128, stop_sequences = []):
+        # Parse stop_sequences into dictionary
+        stop_filters = self.parse_stop_sequences(stop_sequences)
+
+        # If stop_filters contains `regexes`
+        if stop_filters["regexes"]:
+            # Warn user that regexes are not supported
+            #@REVISIT
+            print("WARNING: regexes are not supported by OpenAI")
+
+        print(stop_filters)
+
         # Send message to OpenAI
         response_obj = openai.Completion.create(
             model = self.model_config['model'],
@@ -76,7 +88,7 @@ class OpenAIChatbot(RemoteChatbot):
             # n = 1,
 
             # Stop sequence(s)
-            # stop = ['\n']
+            stop = stop_filters["token_sequences"],
         )
 
         print("=== OpenAI response ===")

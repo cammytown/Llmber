@@ -8,6 +8,7 @@ class AutoChatbot(Chatbot):
 
     valid_options = ["engine",
                      "model",
+                     "api_env_var",
                      "keep_context",
                      "keep_response_in_context",
                      "use_cuda",
@@ -65,6 +66,8 @@ class AutoChatbot(Chatbot):
         # self.model = self.chatbot.model
         self.keep_context = self.chatbot.keep_context
         self.keep_response_in_context = self.chatbot.keep_response_in_context
+        self.is_remote = self.chatbot.is_remote
+        # self.use_cuda = self.chatbot.use_cuda
 
     def tokenize(self, string):
         return self.chatbot.tokenize(string)
