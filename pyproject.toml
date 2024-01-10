@@ -6,7 +6,7 @@ authors = [
 	{ name = "Cammy", email = "cameronsteele@steelecameron.com" }
 ]
 readme = "README.md"
-requires-python = ">=3.9.0,<3.11"
+requires-python = ">=3.9.0,<3.12"
 dependencies = [
 	"appdirs >=1.4.4",
 	"keyring >=24.2.0",
