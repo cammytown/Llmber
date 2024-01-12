@@ -33,8 +33,11 @@ class HFTAutoBot(Chatbot):
 
         cache_dir = None
 
+        print("Loading HFT tokenizer...")
         self.tokenizer = AutoTokenizer.from_pretrained(model_name,
                                                        cache_dir=cache_dir)
+
+        print("Loading HFT model...")
         self.model = AutoModelForCausalLM.from_pretrained(model_name,
                                                           cache_dir=cache_dir)
 
@@ -176,7 +179,10 @@ class HFTAutoBot(Chatbot):
         Sample a token from the current logits.
         """
 
-        assert self.logits is not None, "logits somehow unset before sampling"
+        if self.logits is None:
+            # If no context, add random character to context
+            #@REVISIT what should we do here? probably something smarter
+            self.add_string_to_context("A");
 
         # Apply temperature
         logits = self.logits / temp
