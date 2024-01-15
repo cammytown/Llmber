@@ -124,9 +124,9 @@ class AutoChatbot(Chatbot):
                                          stop_sequences,
                                          n_tokens)
 
-    def request_string(self, n_tokens=128, stop_sequences=[]):
-        return self.chatbot.request_string(n_tokens, stop_sequences)
+    def generate_string(self, n_tokens=128, stop_sequences=[]):
+        return self.chatbot.generate_string(n_tokens, stop_sequences)
 
-    def request_tokens(self, n_tokens=128, stop_sequences=[]):
-        return self.chatbot.request_tokens(n_tokens, stop_sequences)
+    def generate_tokens(self, n_tokens=128, stop_sequences=[]):
+        return self.chatbot.generate_tokens(n_tokens, stop_sequences)
 

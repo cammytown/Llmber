@@ -187,7 +187,7 @@ class RWKVChatbot(Chatbot):
     #     self.add_tokens_to_context(tokens)
 
     #     # Generate response
-    #     response_message = self.request_tokens(n_tokens=n_tokens,
+    #     response_message = self.generate_tokens(n_tokens=n_tokens,
     #                                            stop_sequences=stop_sequences,
     #                                            stop_regex=stop_regex)
 
@@ -195,7 +195,7 @@ class RWKVChatbot(Chatbot):
 
     # @REVISIT n_tokens and n_predict seem at odds; will be confusing
     # @REVISIT currently returns string, not list of tokens; confusing?
-    # def request_tokens(self,
+    # def generate_tokens(self,
     #                    n_tokens = 128,
     #                    stop_sequences = [],
     #                    stop_regex = None):

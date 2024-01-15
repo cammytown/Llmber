@@ -165,8 +165,8 @@ class HFTAutoBot(Chatbot):
                              stop_sequences = stop_sequences,
                              n_tokens = n_tokens)
 
-    def request_tokens(self, n_tokens = 128, stop_sequences = []):
-        return super().request_tokens(n_tokens = n_tokens,
+    def generate_tokens(self, n_tokens = 128, stop_sequences = []):
+        return super().generate_tokens(n_tokens = n_tokens,
                                       stop_sequences = stop_sequences)
 
     def sample(self,
@@ -249,7 +249,7 @@ class HFTAutoBot(Chatbot):
             logits[mask] = -float("Inf")
 
     # #@REVISIT when they patch generate so it can return past_key_values
-    # def request_tokens_generate(self, tokens, n_tokens = 128):
+    # def generate_tokens_generate(self, tokens, n_tokens = 128):
     #     # Generate one token at a time
     #     response = []
 

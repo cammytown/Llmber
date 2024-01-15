@@ -62,7 +62,7 @@ class LlamaCPPChatbot(Chatbot):
             raise Exception("Model failed to initialize")
 
     #@REVISIT n_tokens and n_predict seem at odds; will be confusing
-    def request_tokens(self, n_tokens = 256):
+    def generate_tokens(self, n_tokens = 256):
         token_string = ""
 
         # Sample (generate) tokens
@@ -122,7 +122,7 @@ class LlamaCPPChatbot(Chatbot):
         self.model.ingest_all_pending_input()
 
         # Generate tokens
-        response_message = self.request_tokens()
+        response_message = self.generate_tokens()
 
         return response_message
 

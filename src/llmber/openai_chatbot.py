@@ -54,7 +54,7 @@ class OpenAIChatbot(RemoteChatbot):
         # self.openai_bot.set_presence_penalty(0)
         # self.openai_bot.set_stop(['\n', ' Human:', ' AI:'])
 
-    def request_string(self, n_tokens = 128, stop_sequences = []):
+    def generate_string(self, n_tokens = 128, stop_sequences = []):
         # Parse stop_sequences into dictionary
         stop_filters = self.parse_stop_sequences(stop_sequences)
 
@@ -137,7 +137,7 @@ class OpenAIChatbot(RemoteChatbot):
         # Filter out invalid stop sequences
         stop_sequences = self.filter_valid_openai_stops(stop_sequences)
 
-        response_message = self.request_string(n_tokens, stop_sequences)
+        response_message = self.generate_string(n_tokens, stop_sequences)
 
         return response_message
 

@@ -189,7 +189,7 @@ class Chatbot:
             self.save_context()
 
         # Generate response
-        response_tokens = self.request_tokens(n_tokens=n_tokens,
+        response_tokens = self.generate_tokens(n_tokens=n_tokens,
                                               stop_sequences=stop_sequences)
 
         # Restore context if necessary
@@ -204,13 +204,13 @@ class Chatbot:
 
         return response_text
 
-    def request_string(self, n_tokens = 128, stop_sequences = []):
-        response_tokens = self.request_tokens(n_tokens, stop_sequences)
+    def generate_string(self, n_tokens = 128, stop_sequences = []):
+        response_tokens = self.generate_tokens(n_tokens, stop_sequences)
         response_string = self.detokenize(response_tokens)
 
         return response_string
 
-    def request_tokens(self, n_tokens = 128, stop_sequences = []):
+    def generate_tokens(self, n_tokens = 128, stop_sequences = []):
         # Generate one token at a time
         response_tokens = []
         response_text = "" #@REVISIT optimization? only use if regex is needed?

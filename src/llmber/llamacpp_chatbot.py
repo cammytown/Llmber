@@ -73,8 +73,8 @@ class LlamaCPPChatbot(Chatbot):
                                     stop_sequences = stop_sequences,
                                     n_tokens = n_tokens)
 
-    def request_tokens(self, n_tokens = 128, stop_sequences = []):
-        return super().request_tokens(n_tokens = n_tokens,
+    def generate_tokens(self, n_tokens = 128, stop_sequences = []):
+        return super().generate_tokens(n_tokens = n_tokens,
                                       stop_sequences = stop_sequences)
 
     def sample(self,
