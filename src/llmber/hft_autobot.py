@@ -58,6 +58,14 @@ class HFTAutoBot(Chatbot):
         # If GPU is available
         if torch.cuda.is_available() \
                 and self.model_config.get("use_cuda", False):
+            if __debug__:
+                print(f"DEBUG: CUDA is available. Moving model to GPU...", 
+                      file=sys.stderr)
+                if torch.cuda.device_count() > 0:
+                    device_name = torch.cuda.get_device_name(0)
+                    print(f"DEBUG: Using GPU: {device_name}", file=sys.stderr)
+                print(f"DEBUG: Setting model to half precision...", file=sys.stderr)
+
             #@TODO what if GPU is insufficient?
 
             # Move the model to the GPU
@@ -65,6 +73,16 @@ class HFTAutoBot(Chatbot):
 
             # Set the model to half-precision floating point
             self.model.half()
+        else:
+            if __debug__:
+                print("DEBUG: Using CPU. CUDA availability: " + 
+                      f"{torch.cuda.is_available()}, use_cuda setting: " +
+                      f"{self.model_config.get('use_cuda', False)}", 
+                      file=sys.stderr)
+
+        if __debug__:
+            device = next(self.model.parameters()).device
+            print(f"DEBUG: Model is on device: {device}", file=sys.stderr)
 
         # Set the model to evaluation mode (disables dropout)
         self.model.eval()
