@@ -4,6 +4,9 @@ class AutoChatbot(Chatbot):
     """
     A chatbot that can be used to send messages to and receive messages from
     a LLM. Automatically selects chatbot based on model_config.
+    The first argument can be either:
+    - A string: interpreted as the model name
+    - A dict: full model configuration
     """
 
     valid_options = ["engine",
@@ -16,11 +19,15 @@ class AutoChatbot(Chatbot):
     chatbot: Chatbot
 
     def __init__(self,
-                 name = "AutoChatbot",
+                 model_config: dict | str = {},
                  logdir = "",
-                 model_config: dict = {}):
+                 ):
 
-        super().__init__(name,
+        # Convert string input to dict with model name
+        if isinstance(model_config, str):
+            model_config = {"model": model_config}
+
+        super().__init__("AutoChatbot",
                          model_config = model_config,
                          logdir = logdir)
 
