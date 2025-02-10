@@ -125,15 +125,15 @@ class RWKVChatbot(Chatbot):
     #     tokens = self.tokenize(string)
     #     self.add_tokens_to_context(tokens)
 
-    def get_context(self):
+    def get_state(self):
         return (self.logits, self.state)
 
-    def set_context(self, context):
+    def set_state(self, state):
         #@DOUBLE-CHECK this is right, right? and we need both?
-        self.logits, self.state = context
+        self.logits, self.state = state
 
     def sample(self,
-               temp = 0.8,
+               temperature = 0.8,
                top_k = 30,
                top_p = 0.95,
                repeat_penalty = 1.1,

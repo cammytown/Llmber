@@ -17,11 +17,11 @@ class RemoteChatbot(Chatbot):
     def add_string_to_context(self, string):
         self.context += string
 
-    def get_context(self):
+    def get_state(self):
         return self.context
 
-    def clear_context(self):
+    def clear_state(self):
         self.context = ""
 
-    def set_context(self, context):
-        self.context = context
+    def set_state(self, state):
+        self.context = state

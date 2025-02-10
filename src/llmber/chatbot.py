@@ -16,7 +16,13 @@ class Chatbot:
 
     name: str
 
-    saved_contexts: list = []
+    saved_states: list = []
+
+    temperature: float = 0.8
+    top_k: int = 30
+    top_p: float = 0.95
+    repeat_penalty: float = 1.1
+    presence_penalty: float = 0.0
 
     bos_token: Optional[int] = None
     eos_token: Optional[int] = None
@@ -101,16 +107,15 @@ class Chatbot:
         # Add string to context string
         self.context_string += string
 
-    #@REVISIT rename to get_state ?
-    def get_context(self):
+    def get_state(self):
         """
-        Get the current context of the chatbot.
+        Get the current state of the chatbot.
 
-        This is the state of the chatbot. When set_context is used
-        with the value that get_context returns, the chatbot should be in the
-        same state as it was when get_context was called.
+        This is the internal state of the chatbot. When set_state is used
+        with the value that get_state returns, the chatbot should be in the
+        same state as it was when get_state was called.
 
-        The context can be, for example, the logits and past_key_values of a
+        The state can be, for example, the logits and past_key_values of a
         HuggingFace Transformers model. Otherwise, it could simply be a
         string containing the chatbot's current context as in the case of
         remote chatbots like OpenAI.
@@ -118,43 +123,43 @@ class Chatbot:
 
         raise NotImplementedError
 
-    def set_context(self, context):
+    def set_state(self, state):
         """
-        Set the current context of the chatbot.
+        Set the current state of the chatbot.
 
-        This is the state of the chatbot. When set_context is used
-        with the value that get_context returns, the chatbot should be in the
-        same state as it was when get_context was called.
+        This is the internal state of the chatbot. When set_state is used
+        with the value that get_state returns, the chatbot should be in the
+        same state as it was when get_state was called.
         """
 
         raise NotImplementedError
 
-    def save_context(self):
+    def save_state(self):
         """
-        Save the current context of the chatbot.
-        """
-
-        self.saved_contexts.append(self.get_context())
-
-    def restore_context(self):
-        """
-        Restore the most recently saved context of the chatbot.
+        Save the current state of the chatbot.
         """
 
-        if len(self.saved_contexts) > 0:
-            self.set_context(self.saved_contexts.pop())
+        self.saved_states.append(self.get_state())
+
+    def restore_state(self):
+        """
+        Restore the most recently saved state of the chatbot.
+        """
+
+        if len(self.saved_states) > 0:
+            self.set_state(self.saved_states.pop())
         else:
-            print(f"WARN: No saved contexts to restore", file=sys.stderr)
+            print(f"WARN: No saved states to restore", file=sys.stderr)
 
-    def clear_context(self):
+    def clear_state(self):
         """
-        Clear the current context of the chatbot.
+        Clear the current state of the chatbot.
         """
 
         raise NotImplementedError
 
     def sample(self,
-               temp = 0.8,
+               temperature = 0.8,
                top_k = 30,
                top_p = 0.95,
                repeat_penalty = 1.1,
@@ -182,19 +187,19 @@ class Chatbot:
             if __debug__:
                 print(message, flush=True, end="")
 
-        # Save context if necessary
+        # Save state if necessary
         #@REVISIT I wonder if this should be moved out of this and implemented
         #@ in bot-aukerman or whatever library the user actually needs this for
         if not self.keep_response_in_context:
-            self.save_context()
+            self.save_state()
 
         # Generate response
         response_tokens = self.generate_tokens(n_tokens=n_tokens,
                                               stop_sequences=stop_sequences)
 
-        # Restore context if necessary
+        # Restore state if necessary
         if not self.keep_response_in_context:
-            self.restore_context()
+            self.restore_state()
 
         # Decode the generated response
         response_text = self.detokenize(response_tokens)
@@ -221,10 +226,11 @@ class Chatbot:
 
         # Generate tokens
         for i in range(n_tokens):
-            next_token = self.sample(temp=0.8,
-                                     top_k=30,
-                                     top_p=0.95,
-                                     repeat_penalty=1.3)
+            next_token = self.sample(temperature=self.temperature,
+                                     top_k=self.top_k,
+                                     top_p=self.top_p,
+                                     repeat_penalty=self.repeat_penalty,
+                                     presence_penalty=self.presence_penalty)
 
             # Check if token is beginning-of-sequence token
             if self.bos_token and next_token == self.bos_token:

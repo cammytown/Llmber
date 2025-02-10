@@ -9,13 +9,18 @@ from .chatbot import Chatbot
 
 class HFTAutoBot(Chatbot):
     valid_options = ["model",
+                     "temperature",
+                     "top_k",
+                     "top_p",
+                     "repeat_penalty",
+                     "presence_penalty",
                      "keep_response_in_context",
                      "use_cuda",
                      "max_context_length"]
 
     logits: Optional[torch.LongTensor] = None
     past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None
-    saved_contexts: List[tuple] = []
+    saved_states: List[tuple] = []
 
     def __init__(self,
                  model_config: dict = {},
@@ -57,7 +62,7 @@ class HFTAutoBot(Chatbot):
 
         # If GPU is available
         if torch.cuda.is_available() \
-                and self.model_config.get("use_cuda", False):
+                and self.model_config.get("use_cuda", True):
             if __debug__:
                 print(f"DEBUG: CUDA is available. Moving model to GPU...", 
                       file=sys.stderr)
@@ -97,13 +102,13 @@ class HFTAutoBot(Chatbot):
     def detokenize(self, tokens):
         return self.tokenizer.decode(tokens, skip_special_tokens=True)
 
-    def get_context(self):
+    def get_state(self):
         return (self.logits, self.past_key_values)
 
-    def set_context(self, context):
-        self.logits, self.past_key_values = context
+    def set_state(self, state):
+        self.logits, self.past_key_values = state
 
-    def clear_context(self):
+    def clear_state(self):
         self.logits = None
         self.past_key_values = None
 
@@ -188,7 +193,7 @@ class HFTAutoBot(Chatbot):
                                       stop_sequences = stop_sequences)
 
     def sample(self,
-               temp = 1.0,
+               temperature = 1.0,
                top_k = 0,
                top_p = 0.0,
                repeat_penalty = 1.1,
@@ -203,7 +208,7 @@ class HFTAutoBot(Chatbot):
             self.add_string_to_context("A");
 
         # Apply temperature
-        logits = self.logits / temp
+        logits = self.logits / temperature
 
         #@TODO
         # for banned_token in self.args.token_ban:

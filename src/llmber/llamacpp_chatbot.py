@@ -52,11 +52,11 @@ class LlamaCPPChatbot(Chatbot):
     def detokenize(self, tokens):
         return self.model.detokenize(tokens).decode("utf-8")
 
-    def get_context(self):
+    def get_state(self):
         return self.model.save_state()
 
-    def set_context(self, context):
-        self.model.load_state(context)
+    def set_state(self, state):
+        self.model.load_state(state)
 
     def add_tokens_to_context(self, tokens):
         """
@@ -78,12 +78,12 @@ class LlamaCPPChatbot(Chatbot):
                                       stop_sequences = stop_sequences)
 
     def sample(self,
-               temp = 0.8,
+               temperature = 0.8,
                top_k = 30,
                top_p = 0.95,
                repeat_penalty = 1.1,
                presence_penalty = 0.0):
-        return self.model.sample(temp = temp,
+        return self.model.sample(temperature = temperature,
                                  top_k = top_k,
                                  top_p = top_p,
                                  repeat_penalty = repeat_penalty,

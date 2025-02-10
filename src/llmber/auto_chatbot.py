@@ -12,6 +12,11 @@ class AutoChatbot(Chatbot):
     valid_options = ["engine",
                      "model",
                      "api_env_var",
+                     "temperature",
+                     "top_k",
+                     "top_p",
+                     "repeat_penalty",
+                     "presence_penalty",
                      "keep_context",
                      "keep_response_in_context",
                      "use_cuda",
@@ -91,28 +96,28 @@ class AutoChatbot(Chatbot):
     def add_string_to_context(self, string):
         return self.chatbot.add_string_to_context(string)
 
-    def get_context(self):
-        return self.chatbot.get_context()
+    def get_state(self):
+        return self.chatbot.get_state()
 
-    def set_context(self, context):
-        return self.chatbot.set_context(context)
+    def set_state(self, state):
+        return self.chatbot.set_state(state)
 
-    def save_context(self):
-        return self.chatbot.save_context()
+    def save_state(self):
+        return self.chatbot.save_state()
 
-    def restore_context(self):
-        return self.chatbot.restore_context()
+    def restore_state(self):
+        return self.chatbot.restore_state()
 
-    def clear_context(self):
-        return self.chatbot.clear_context()
+    def clear_state(self):
+        return self.chatbot.clear_state()
 
     def sample(self,
-               temp = 0.8,
+               temperature = 0.8,
                top_k = 30,
                top_p = 0.95,
                repeat_penalty = 1.1,
                presence_penalty = 0.0):
-        return self.chatbot.sample(temp,
+        return self.chatbot.sample(temperature,
                                    top_k,
                                    top_p,
                                    repeat_penalty,
